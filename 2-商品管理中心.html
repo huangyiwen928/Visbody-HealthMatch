@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>商品管理中心 - 推荐配置平台 (V25.4 Fix)</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      body {
+        font-family: "Inter", "PingFang SC", sans-serif;
+        background-color: #f8fafc;
+        color: #0f172a;
+        margin: 0;
+      }
+
+      /* --- 布局核心 --- */
+
+      .layout-container {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .main-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .content-split {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* 滚动区域优化 */
+
+      .scroll-area {
+        overflow-y: auto;
+        height: 100%;
+      }
+
+      /* 隐藏滚动条但保留功能 */
+
+      .scroll-area::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+
+      .scroll-area::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+
+      .scroll-area::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      /* --- 组件样式 --- */
+
+      .nav-item {
+        display: flex;
+
+        align-items: center;
+
+        padding: 0.75rem 1.5rem; /* px-6 py-3 */
+
+        color: #94a3b8; /* text-slate-400 */
+
+        border-left: 4px solid transparent;
+
+        cursor: pointer;
+
+        user-select: none;
+
+        transition: all 0.2s;
+      }
+
+      .nav-item:hover {
+        background-color: #1e293b; /* bg-slate-800 */
+
+        color: white;
+      }
+
+      .nav-item.active {
+        background-color: #1e293b;
+
+        color: white;
+
+        border-left-color: #3b82f6; /* border-blue-500 */
+      }
+
+      /* 状态徽标 */
+
+      .badge {
+        display: inline-flex;
+
+        align-items: center;
+
+        padding: 0.125rem 0.625rem; /* px-2.5 py-0.5 */
+
+        border-radius: 9999px;
+
+        font-size: 10px;
+
+        font-weight: 700;
+
+        border-width: 1px;
+
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      }
+
+      .badge-online {
+        background-color: #f0fdf4;
+        color: #15803d;
+        border-color: #bbf7d0;
+      } /* 已上架 */
+
+      .badge-offline {
+        background-color: #f1f5f9;
+        color: #64748b;
+        border-color: #e2e8f0;
+      } /* 已下架 */
+
+      .badge-ready {
+        background-color: #eff6ff;
+        color: #1d4ed8;
+        border-color: #bfdbfe;
+      } /* 待上架 */
+
+      .badge-draft {
+        background-color: #fff7ed;
+        color: #c2410c;
+        border-color: #fed7aa;
+      } /* 草稿 */
+
+      /* 系列列表项 */
+
+      .series-item {
+        padding: 1rem;
+
+        border-left: 4px solid transparent;
+
+        cursor: pointer;
+
+        transition: background-color 0.2s;
+
+        position: relative;
+      }
+
+      .series-item:hover {
+        background-color: #f8fafc;
+      }
+
+      .series-item.active {
+        background-color: rgba(239, 246, 255, 0.6); /* bg-blue-50/60 */
+
+        border-left-color: #2563eb; /* blue-600 */
+      }
+
+      /* 操作按钮 */
+
+      .btn-text {
+        font-size: 0.75rem;
+
+        font-weight: 700;
+
+        transition: color 0.2s;
+
+        cursor: pointer;
+
+        user-select: none;
+      }
+
+      .btn-link {
+        color: #2563eb;
+      }
+
+      .btn-link:hover {
+        color: #1e40af;
+      }
+
+      .btn-danger {
+        color: #94a3b8;
+      }
+
+      .btn-danger:hover {
+        color: #dc2626;
+      }
+
+      /* 抽屉动画 */
+
+      .drawer-backdrop {
+        background-color: rgba(15, 23, 42, 0.4);
+
+        backdrop-filter: blur(2px);
+
+        transition: opacity 0.3s;
+
+        opacity: 0;
+
+        pointer-events: none;
+
+        position: fixed;
+
+        inset: 0;
+
+        z-index: 40;
+      }
+
+      .drawer-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .drawer {
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+
+        transform: translateX(100%);
+
+        position: fixed;
+
+        top: 0;
+
+        right: 0;
+
+        height: 100%;
+
+        z-index: 50;
+
+        background-color: white;
+
+        display: flex;
+
+        flex-direction: column;
+      }
+
+      .drawer.open {
+        transform: translateX(0);
+      }
+
+      /* 批量操作栏 */
+
+      .batch-bar {
+        transform: translate(-50%, 150%);
+
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+        position: absolute;
+
+        bottom: 2rem;
+
+        left: 50%;
+
+        z-index: 30;
+      }
+
+      .batch-bar.show {
+        transform: translate(-50%, 0);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="layout-container">
+      <aside class="w-64 bg-slate-900 flex-shrink-0 flex flex-col z-50">
+        <div
+          class="h-16 flex items-center px-6 font-bold text-white border-b border-slate-800 text-lg gap-2"
+        >
+          <div
+            class="w-7 h-7 bg-blue-600 rounded flex items-center justify-center text-xs shadow-lg"
+          >
+            <i class="fas fa-cube"></i>
+          </div>
+
+          配置中心
+        </div>
+
+        <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
+          <div
+            class="px-6 text-[10px] font-bold text-slate-600 uppercase mb-2 tracking-wider"
+          >
+            数据资产中心
+          </div>
+
+          <div class="nav-item">
+            <i class="fas fa-database w-5 mr-3"></i> 元数据字典
+          </div>
+
+          <div class="nav-item">
+            <i class="fas fa-clipboard-list w-5 mr-3"></i> 问卷设计器
+          </div>
+
+          <div
+            class="px-6 text-[10px] font-bold text-slate-600 uppercase mb-2 mt-6 tracking-wider"
+          >
+            商品管理中心
+          </div>
+
+          <div class="nav-item active">
+            <i class="fas fa-box w-5 mr-3"></i> 商品库管理
+          </div>
+
+          <div
+            class="px-6 text-[10px] font-bold text-slate-600 uppercase mb-2 mt-6 tracking-wider"
+          >
+            推荐策略中心
+          </div>
+
+          <div class="nav-item">
+            <i class="fas fa-sitemap w-5 mr-3"></i> 策略管理
+          </div>
+        </nav>
+
+        <div
+          class="p-4 border-t border-slate-800 text-xs text-slate-500 flex items-center gap-2"
+        >
+          <span class="w-2 h-2 rounded-full bg-green-500"></span> 运营端 V25.4
+        </div>
+      </aside>
+
+      <main class="main-area bg-slate-50">
+        <header
+          class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0 z-20 shadow-sm"
+        >
+          <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-slate-800">商品库管理</h1>
+
+            <!-- 类目 Tab 区域 -->
+
+            <div class="flex items-center gap-2">
+              <div
+                class="flex bg-slate-100 rounded-lg p-1 gap-1"
+                id="category-tabs"
+              >
+                <!-- 动态渲染类目 -->
+              </div>
+
+              <button
+                onclick="app.openDrawer('category')"
+                class="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition border border-transparent hover:border-slate-200"
+                title="管理类目"
+              >
+                <i class="fas fa-cog"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <div class="relative group">
+              <input
+                type="text"
+                placeholder="搜索商品名称/编码..."
+                class="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:border-blue-500 outline-none transition bg-white shadow-sm"
+              />
+
+              <i
+                class="fas fa-search absolute left-3 top-3 text-slate-400 group-focus-within:text-blue-500"
+              ></i>
+            </div>
+
+            <button
+              onclick="app.openDrawer('new')"
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm flex items-center gap-2 active:scale-95 transition"
+            >
+              <i class="fas fa-plus"></i> 新增 SKU
+            </button>
+
+            <button onclick="app.openImportModal()"
+              class="bg-white text-slate-600 border border-slate-300 px-3 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 transition shadow-sm"
+            >
+              <i class="fas fa-file-import mr-1"></i> 导入
+            </button>
+          </div>
+        </header>
+
+        <div class="content-split">
+          <aside
+            class="w-72 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
+          >
+            <div
+              class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50"
+            >
+              <span
+                class="text-xs font-bold text-slate-500 uppercase tracking-wider"
+                >产品系列 (Series)</span
+              >
+
+              <button
+                class="text-xs text-blue-600 font-bold hover:bg-blue-100 px-2 py-1 rounded transition flex items-center gap-1"
+              >
+                <i class="fas fa-plus"></i> 新建
+              </button>
+            </div>
+
+            <div class="scroll-area">
+              <div class="series-item active">
+                <div class="flex gap-3">
+                  <div
+                    class="w-12 h-12 rounded bg-blue-50 border border-blue-100 flex-shrink-0 overflow-hidden relative flex items-center justify-center"
+                  >
+                    <i class="fas fa-cloud text-blue-400 text-xl"></i>
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <div
+                      class="font-bold text-sm text-slate-800 truncate"
+                      title="深睡记忆棉枕系列"
+                    >
+                      深睡记忆棉枕系列
+                    </div>
+
+                    <div
+                      class="text-xs text-slate-500 mt-1 flex items-center gap-2"
+                    >
+                      <span
+                        class="bg-green-100 text-green-700 px-1.5 rounded-[2px] font-mono"
+                        >5</span
+                      >
+                      SKU
+
+                      <span class="text-slate-300">|</span>
+
+                      <span class="text-slate-400">枕头</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <button
+                    class="text-slate-400 hover:text-blue-600 p-1"
+                    title="编辑系列"
+                  >
+                    <i class="fas fa-edit text-xs"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="series-item">
+                <div class="flex gap-3">
+                  <div
+                    class="w-12 h-12 rounded bg-slate-100 border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center"
+                  >
+                    <i class="fas fa-shield-alt text-slate-400 text-xl"></i>
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <div class="font-bold text-sm text-slate-600 truncate">
+                      Apro5 护脊工学枕
+                    </div>
+
+                    <div
+                      class="text-xs text-slate-400 mt-1 flex items-center gap-2"
+                    >
+                      <span
+                        class="bg-slate-100 text-slate-600 px-1.5 rounded-[2px] font-mono"
+                        >2</span
+                      >
+                      SKU
+
+                      <span class="text-slate-300">|</span>
+
+                      <span class="text-slate-400">枕头</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="flex-1 bg-slate-50 relative flex flex-col min-w-0">
+            <div class="scroll-area p-6 pb-24">
+              <div
+                class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden"
+              >
+                <table class="w-full text-left text-sm">
+                  <thead
+                    class="bg-slate-50 text-slate-500 font-bold uppercase text-xs border-b border-slate-200 sticky top-0 z-10"
+                  >
+                    <tr>
+                      <th class="px-6 py-4 w-12 text-center bg-slate-50">
+                        <input
+                          type="checkbox"
+                          onchange="app.toggleBatchBar(this.checked)"
+                          class="rounded border-slate-300 w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </th>
+
+                      <th class="px-6 py-4 w-1/3 bg-slate-50">SKU 信息</th>
+
+                      <th class="px-6 py-4 bg-slate-50">
+                        推荐匹配属性
+                      </th>
+
+                      <th class="px-6 py-4 bg-slate-50">状态</th>
+
+                      <th class="px-6 py-4 text-right bg-slate-50">操作</th>
+                    </tr>
+                  </thead>
+
+                  <tbody
+                    class="divide-y divide-slate-100 bg-white"
+                    id="sku-list"
+                  >
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                      <td class="px-6 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          class="sku-check rounded border-slate-300 w-4 h-4 cursor-pointer"
+                          onchange="app.checkItem()"
+                        />
+                      </td>
+
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-4">
+                          <div
+                            class="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 overflow-hidden flex-shrink-0 flex items-center justify-center"
+                          >
+                            <span class="font-bold text-blue-600 text-xs"
+                              >High</span
+                            >
+                          </div>
+
+                          <div>
+                            <div class="font-bold text-slate-800">
+                              深睡枕-慢回弹-高款
+                            </div>
+
+                            <div
+                              class="text-xs text-slate-400 font-mono mt-0.5"
+                            >
+                              MP-001-H
+                            </div>
+
+                            <div class="text-xs text-slate-500 mt-0.5">
+                              ¥ 299.00
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td class="px-6 py-4">
+                        <div class="flex flex-wrap gap-2">
+                          <span
+                            class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
+                            >高度: 12cm</span
+                          >
+
+                          <span
+                            class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200"
+                            >记忆棉</span
+                          >
+                        </div>
+                      </td>
+
+                      <td class="px-6 py-4">
+                        <span class="badge badge-online"
+                          ><i class="fas fa-circle text-[6px] mr-1.5"></i
+                          >已上架</span
+                        >
+                      </td>
+
+                      <td class="px-6 py-4 text-right space-x-3">
+                        <span
+                          class="btn-text btn-danger"
+                          onclick="alert('执行下架操作')"
+                          >下架</span
+                        >
+
+                        <span
+                          class="btn-text text-slate-400 hover:text-blue-600"
+                          onclick="app.copySku(this)"
+                          >复制</span
+                        >
+
+                        <span
+                          class="btn-text btn-link"
+                          onclick="app.openDrawer('edit', '深睡枕-慢回弹-高款', 'online')"
+                          >编辑</span
+                        >
+                      </td>
+                    </tr>
+
+                    <tr class="hover:bg-slate-50 transition-colors">
+                      <td class="px-6 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          class="sku-check rounded border-slate-300 w-4 h-4 cursor-pointer"
+                          onchange="app.checkItem()"
+                        />
+                      </td>
+
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-4">
+                          <div
+                            class="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 overflow-hidden flex-shrink-0 flex items-center justify-center"
+                          >
+                            <span class="font-bold text-blue-600 text-xs"
+                              >Med</span
+                            >
+                          </div>
+
+                          <div>
+                            <div class="font-bold text-slate-800">
+                              深睡枕-慢回弹-中款
+                            </div>
+
+                            <div
+                              class="text-xs text-slate-400 font-mono mt-0.5"
+                            >
+                              MP-001-M
+                            </div>
+
+                            <div class="text-xs text-slate-500 mt-0.5">
+                              ¥ 299.00
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td class="px-6 py-4">
+                        <div class="flex flex-wrap gap-2">
+                          <span
+                            class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
+                            >高度: 10cm</span
+                          >
+
+                          <span
+                            class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200"
+                            >记忆棉</span
+                          >
+                        </div>
+                      </td>
+
+                      <td class="px-6 py-4">
+                        <span class="badge badge-ready"
+                          ><i class="fas fa-clock mr-1.5"></i>待上架</span
+                        >
+                      </td>
+
+                      <td class="px-6 py-4 text-right space-x-3">
+                        <span
+                          class="btn-text text-green-600 hover:text-green-800"
+                          >上架</span
+                        >
+
+                        <span
+                          class="btn-text text-slate-400 hover:text-blue-600"
+                          onclick="app.copySku(this)"
+                          >复制</span
+                        >
+
+                        <span
+                          class="btn-text btn-link"
+                          onclick="app.openDrawer('edit', '深睡枕-慢回弹-中款', 'ready')"
+                          >编辑</span
+                        >
+
+                        <span class="btn-text btn-danger">删除</span>
+                      </td>
+                    </tr>
+
+                    <tr
+                      class="hover:bg-slate-50 transition-colors bg-slate-50/50"
+                    >
+                      <td class="px-6 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          class="sku-check rounded border-slate-300 w-4 h-4 cursor-pointer"
+                          onchange="app.checkItem()"
+                        />
+                      </td>
+
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-4">
+                          <div
+                            class="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center"
+                          >
+                            <span class="font-bold text-slate-400 text-xs"
+                              >Low</span
+                            >
+                          </div>
+
+                          <div>
+                            <div class="font-bold text-slate-500">
+                              深睡枕-慢回弹-低款
+                            </div>
+
+                            <div
+                              class="text-xs text-slate-400 font-mono mt-0.5"
+                            >
+                              --
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td class="px-6 py-4">
+<span
+                    class="text-xs text-orange-400 italic bg-orange-50 px-2 py-0.5 rounded border border-orange-100"
+                    >必填属性未完善</span
+                  >
+                      </td>
+
+                      <td class="px-6 py-4">
+                        <span class="badge badge-draft"
+                          ><i class="fas fa-pen mr-1.5"></i>草稿</span
+                        >
+                      </td>
+
+                      <td class="px-6 py-4 text-right space-x-3">
+                        <span
+                          class="btn-text text-slate-400 hover:text-blue-600"
+                          onclick="app.copySku(this)"
+                          >复制</span
+                        >
+
+                        <span
+                          class="btn-text btn-link"
+                          onclick="app.openDrawer('edit', '深睡枕-慢回弹-低款', 'draft')"
+                          >编辑</span
+                        >
+
+                        <span class="btn-text btn-danger">删除</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div
+              id="batch-bar"
+              class="batch-bar absolute bottom-8 left-1/2 bg-slate-800 text-white rounded-xl shadow-2xl px-6 py-3 flex items-center gap-6 z-30"
+            >
+              <div class="text-sm font-bold flex items-center gap-2">
+                <span
+                  class="bg-blue-600 text-[10px] px-2 py-0.5 rounded-full"
+                  id="selected-count"
+                  >0</span
+                >
+
+                <span>项已选择</span>
+              </div>
+
+              <div class="h-4 w-px bg-slate-600"></div>
+
+              <div class="flex gap-2">
+                <button
+                  class="hover:bg-slate-700 px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-2 text-green-400 group"
+                >
+                  <i
+                    class="fas fa-arrow-up group-hover:-translate-y-0.5 transition"
+                  ></i>
+                  批量上架
+                </button>
+
+                <button
+                  class="hover:bg-slate-700 px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-2 text-red-400 group"
+                >
+                  <i
+                    class="fas fa-arrow-down group-hover:translate-y-0.5 transition"
+                  ></i>
+                  批量下架
+                </button>
+
+                <button
+                  class="hover:bg-slate-700 px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-2 text-slate-300 hover:text-white"
+                  onclick="alert('系统提示：若选中包含[已上架]商品，将跳过执行。')"
+                >
+                  <i class="fas fa-trash"></i> 批量删除
+                </button>
+              </div>
+
+              <button
+                onclick="app.toggleBatchBar(false)"
+                class="ml-4 text-slate-400 hover:text-white"
+              >
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div
+        id="drawer-backdrop"
+        onclick="app.closeDrawer()"
+        class="drawer-backdrop fixed inset-0"
+      ></div>
+
+      <!-- 添加字段弹窗 -->
+      <div id="attr-add-modal" class="fixed inset-0 z-[70] hidden">
+          <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="app.closeAddAttrModal()"></div>
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-[400px] p-6 animate-fade-in-up">
+              <div class="flex justify-between items-center mb-6">
+                  <h3 class="text-lg font-bold text-slate-800">添加属性字段</h3>
+                  <button onclick="app.closeAddAttrModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+              </div>
+
+              <div class="space-y-4">
+                  <div>
+                      <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">属性名称 <span class="text-red-500">*</span></label>
+                      <input type="text" id="new-attr-name" placeholder="如：适用人群" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                  </div>
+
+                  <div>
+                      <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">属性归属 <span class="text-red-500">*</span></label>
+                      <div class="flex gap-4">
+                          <label class="flex items-center gap-2 cursor-pointer">
+                              <input type="radio" name="new-attr-group" value="basic" class="text-blue-600 focus:ring-blue-500">
+                              <span class="text-sm text-slate-700">基础规格</span>
+                          </label>
+                          <label class="flex items-center gap-2 cursor-pointer">
+                              <input type="radio" name="new-attr-group" value="algo" class="text-blue-600 focus:ring-blue-500" checked>
+                              <span class="text-sm text-slate-700">推荐匹配</span>
+                          </label>
+                      </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-4">
+                      <div>
+                          <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">数据类型 <span class="text-red-500">*</span></label>
+                          <select id="new-attr-type" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                              <option value="text">文本</option>
+                              <option value="number">数值</option>
+                              <option value="enum">枚举</option>
+                          </select>
+                      </div>
+                      <div>
+                          <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">单位 (可选)</label>
+                          <input type="text" id="new-attr-unit" placeholder="如：cm" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                      </div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                      <input type="checkbox" id="new-attr-required" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                      <label for="new-attr-required" class="text-sm text-slate-700 font-bold select-none">设为必填项</label>
+                  </div>
+              </div>
+
+              <div class="mt-8 flex justify-end gap-3">
+                  <button onclick="app.closeAddAttrModal()" class="px-4 py-2 text-slate-500 hover:text-slate-700 font-bold text-sm">取消</button>
+                  <button onclick="app.saveNewAttr()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 shadow-sm">保存</button>
+              </div>
+          </div>
+      </div>
+
+      <!-- 导入弹窗 -->
+      <div id="import-modal" class="fixed inset-0 z-[60] hidden">
+          <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="app.closeImportModal()"></div>
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-[500px] p-6 animate-fade-in-up">
+              <div class="flex justify-between items-center mb-6">
+                  <h3 class="text-lg font-bold text-slate-800">批量导入商品</h3>
+                  <button onclick="app.closeImportModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+              </div>
+
+              <div class="space-y-6">
+                  <!-- 步骤1: 选择类目 -->
+                  <div>
+                      <label class="block text-xs font-bold text-slate-500 uppercase mb-2">1. 选择目标类目 (必选)</label>
+                      <select class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                          <option>枕头类目</option>
+                          <option>床垫类目</option>
+                      </select>
+                      <p class="text-[10px] text-slate-400 mt-1">* 不同类目的属性模板不同，请分批次导入</p>
+                  </div>
+
+                  <!-- 步骤2: 下载模板 -->
+                  <div>
+                      <label class="block text-xs font-bold text-slate-500 uppercase mb-2">2. 获取数据模板</label>
+                      <button class="flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition w-full justify-center border border-blue-100">
+                          <i class="fas fa-download"></i> 下载 "枕头类目" 专用导入模板.xlsx
+                      </button>
+                  </div>
+
+                  <!-- 步骤3: 上传 -->
+                  <div>
+                      <label class="block text-xs font-bold text-slate-500 uppercase mb-2">3. 上传文件</label>
+                      <div class="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition cursor-pointer group">
+                          <i class="fas fa-cloud-upload-alt text-3xl text-slate-300 group-hover:text-blue-500 mb-2 transition"></i>
+                          <p class="text-xs text-slate-500 font-medium">点击或拖拽文件至此</p>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="mt-8 flex justify-end gap-3">
+                  <button onclick="app.closeImportModal()" class="px-4 py-2 text-slate-500 hover:text-slate-700 font-bold text-sm">取消</button>
+                  <button onclick="alert('模拟导入成功！\n成功: 12条\n失败: 0条'); app.closeImportModal()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 shadow-sm">开始导入</button>
+              </div>
+          </div>
+      </div>
+
+      <!-- SKU 编辑抽屉 -->
+
+      <aside
+        id="drawer-sku"
+        class="drawer fixed top-0 right-0 h-full w-[640px] bg-white flex flex-col shadow-2xl"
+      >
+        <div
+          class="h-16 border-b border-slate-100 flex justify-between items-center px-8 bg-slate-50 flex-shrink-0"
+        >
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">编辑 SKU</h3>
+
+            <div class="flex items-center gap-2 mt-0.5" id="drawer-status-bar">
+              <span class="badge badge-online">已上架</span>
+
+              <span class="text-[10px] text-slate-400"
+                >最后更新: 2025-07-15</span
+              >
+            </div>
+          </div>
+
+          <button
+            onclick="app.closeDrawer()"
+            class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center transition"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-8 space-y-8">
+          <section>
+            <div class="flex items-center justify-between mb-4">
+              <h4
+                class="text-xs font-bold text-slate-500 uppercase tracking-wider"
+              >
+                基础信息
+              </h4>
+            </div>
+
+            <div class="grid grid-cols-2 gap-5" id="basic-info-container">
+              <div class="col-span-2">
+                <label class="block text-xs font-bold text-slate-600 mb-1.5"
+                  >所属系列 (SPU)</label
+                >
+
+                <div
+                  class="w-full bg-slate-100 border border-slate-200 rounded px-3 py-2 text-sm text-slate-500 cursor-not-allowed flex items-center justify-between"
+                >
+                  <span>深睡记忆棉枕系列</span>
+
+                  <span
+                    class="text-xs bg-slate-200 px-2 py-0.5 rounded text-slate-600"
+                    >类目: 枕头</span
+                  >
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1.5"
+                  >SKU 名称 <span class="text-red-500">*</span></label
+                >
+
+                <input
+                  type="text"
+                  id="input-name"
+                  value="深睡枕-慢回弹-高款"
+                  class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none transition shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1.5"
+                  >SKU 编码 <span class="text-red-500">*</span></label
+                >
+
+                <input
+                  type="text"
+                  id="input-code"
+                  value="MP-001-H"
+                  class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none transition font-mono shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1.5"
+                  >售价 (¥)</label
+                >
+
+                <input
+                  type="number"
+                  value="299"
+                  class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none transition font-bold text-slate-700 shadow-sm"
+                />
+              </div>
+            </div>
+            
+            <!-- 基础信息扩展按钮 -->
+            <div class="mt-4 border-t border-slate-100 pt-4">
+                <button onclick="app.addCustomProp('basic-info-container')" class="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1.5 rounded transition flex items-center gap-1">
+                    <i class="fas fa-plus-circle"></i> 添加自定义规格 (如包装尺寸)
+                </button>
+            </div>
+          </section>
+
+          <!-- 推荐匹配属性 (继承自类目) -->
+          <section class="bg-blue-50/50 p-6 rounded-xl border border-blue-100 relative overflow-hidden">
+            <div class="absolute right-0 top-0 p-4 opacity-10 pointer-events-none">
+              <i class="fas fa-sitemap text-8xl text-blue-600"></i>
+            </div>
+
+            <div class="flex items-center gap-2 mb-6 relative z-10">
+              <span class="w-8 h-8 rounded bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm"><i class="fas fa-project-diagram"></i></span>
+              <div>
+                <h4 class="text-sm font-bold text-blue-900">推荐匹配属性 (Inherited)</h4>
+                <p class="text-[10px] text-blue-600/80">以下属性由 "枕头" 类目模板定义，SKU 必须填写</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 relative z-10" id="algo-props-container">
+              <div class="col-span-2">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5 flex justify-between">
+                  <span>产品高度 (cm) <span class="text-red-500">*</span></span>
+                  <span class="text-[10px] font-normal text-slate-500 bg-white px-2 py-0.5 rounded border border-blue-100 shadow-sm">数值型</span>
+                </label>
+                <div class="flex items-center gap-2">
+                  <input type="number" value="12" class="flex-1 border border-blue-200 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none shadow-sm placeholder-slate-400 bg-white text-center font-bold text-slate-800" />
+                  <span class="text-slate-400 text-xs">支持区间 (如 10-12)</span>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">核心材质 <span class="text-red-500">*</span></label>
+                <select class="w-full border border-blue-200 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white shadow-sm font-medium text-slate-700">
+                  <option value="memory_foam" selected>记忆棉</option>
+                  <option value="latex">乳胶</option>
+                  <option value="down">羽绒</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">软硬度 <span class="text-red-500">*</span></label>
+                <select class="w-full border border-blue-200 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white shadow-sm font-medium text-slate-700">
+                  <option value="soft">偏软</option>
+                  <option value="medium" selected>适中</option>
+                  <option value="hard">偏硬</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="mt-4 relative z-10 pt-2 border-t border-blue-200/50">
+                <button onclick="app.addCustomProp('algo-props-container', true)" class="text-xs font-bold text-blue-700 hover:bg-blue-100 px-2 py-1.5 rounded transition flex items-center gap-1">
+                    <i class="fas fa-plus-circle"></i> 添加自定义匹配属性 (如抗菌等级)
+                </button>
+            </div>
+          </section>
+
+          <!-- 自定义扩展属性 (移除旧的单独区块，已整合进上方) -->
+        </div>
+
+        <div
+          class="p-6 border-t border-slate-100 bg-white flex justify-between items-center"
+        >
+          <button
+            class="text-slate-400 hover:text-red-600 px-4 py-2 rounded text-sm font-bold transition flex items-center gap-2 group"
+            id="btn-delete"
+          >
+            <i class="far fa-trash-alt group-hover:scale-110 transition"></i>
+            <span id="txt-delete">删除商品</span>
+          </button>
+
+          <div class="flex gap-3">
+            <button
+              class="px-5 py-2.5 border border-slate-300 text-slate-600 rounded-lg font-bold text-sm hover:bg-slate-50 transition active:scale-95"
+            >
+              存为草稿
+            </button>
+
+            <button
+              class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition transform active:scale-95"
+            >
+              保存并上架
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 类目管理抽屉 -->
+
+      <aside
+        id="drawer-category"
+        class="drawer fixed top-0 right-0 h-full w-[400px] bg-white flex flex-col shadow-2xl"
+      >
+        <div
+          class="h-16 border-b border-slate-100 flex justify-between items-center px-6 bg-slate-50 flex-shrink-0"
+        >
+          <h3 class="font-bold text-slate-800 text-lg">产品类目管理</h3>
+
+          <button
+            onclick="app.closeDrawer()"
+            class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center transition"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-2"
+              >添加新类目</label
+            >
+
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="new-cat-name"
+                placeholder="输入类目名称 (如: 智能床)"
+                class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none transition"
+              />
+
+              <button
+                onclick="app.addCategory()"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition"
+              >
+                添加
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-2"
+              >现有类目 (点击配置属性)</label
+            >
+
+            <div class="space-y-2" id="category-list-container">
+              <!-- 类目列表动态渲染 -->
+            </div>
+          </div>
+
+          <!-- 属性模板配置区 (新增) -->
+          <div id="attr-template-config" class="hidden border-t border-slate-100 pt-6 mt-6">
+             <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h4 class="font-bold text-slate-800 text-sm">"<span id="config-cat-name"></span>" 属性模板</h4>
+                    <p class="text-[10px] text-slate-400">配置该类目下所有 SKU 的共有字段</p>
+                </div>
+                <button class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded font-bold hover:bg-blue-100 transition" onclick="app.openAddAttrModal()">+ 添加字段</button>
+             </div>
+             
+             <div class="bg-slate-50 rounded-lg p-3 space-y-2" id="attr-list-container">
+                <!-- 表头 -->
+                <div class="flex items-center justify-between px-2 pb-1 text-[10px] text-slate-400 font-bold uppercase">
+                    <span>属性名称</span>
+                    <div class="flex gap-4">
+                        <span>归属</span>
+                        <span>数据类型</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs bg-white p-2 rounded border border-slate-200">
+                    <span class="font-bold text-slate-700">高度 (cm)</span>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-blue-50 text-blue-600 px-1.5 rounded font-bold">推荐匹配</span>
+                        <span class="bg-slate-100 text-slate-500 px-1.5 rounded">数值</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-xs bg-white p-2 rounded border border-slate-200">
+                    <span class="font-bold text-slate-700">核心材质</span>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-blue-50 text-blue-600 px-1.5 rounded font-bold">推荐匹配</span>
+                        <span class="bg-slate-100 text-slate-500 px-1.5 rounded">枚举</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-xs bg-white p-2 rounded border border-slate-200">
+                    <span class="font-bold text-slate-700">包装尺寸</span>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-slate-100 text-slate-500 px-1.5 rounded">基础规格</span>
+                        <span class="bg-slate-100 text-slate-500 px-1.5 rounded">文本</span>
+                    </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      </aside>
+
+      <script>
+        const app = {
+          // 数据状态
+
+          categories: [
+            { id: "c1", name: "枕头类目", active: true },
+
+            { id: "c2", name: "床垫类目", active: false },
+
+            { id: "c3", name: "工学椅", active: false },
+          ],
+
+          init: function () {
+            this.renderCategories();
+          },
+
+          // 渲染类目 Tab
+
+          renderCategories: function () {
+            const container = document.getElementById("category-tabs");
+
+            const listContainer = document.getElementById(
+              "category-list-container"
+            );
+
+            // 渲染顶部 Tabs
+
+            container.innerHTML = this.categories
+              .map(
+                (cat) => `
+
+                    <button onclick="app.switchCategory('${cat.id}')" 
+
+                        class="px-3 py-1 text-xs font-bold rounded transition border ${
+                          cat.active
+                            ? "bg-white shadow-sm text-blue-600 border-slate-200"
+                            : "text-slate-500 hover:text-slate-700 border-transparent"
+                        }">
+
+                        ${cat.name}
+
+                    </button>
+
+                `
+              )
+              .join("");
+
+            // 渲染抽屉列表
+            listContainer.innerHTML = this.categories
+              .map(
+                (cat) => `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg group">
+                        <span class="text-sm font-bold text-slate-700">${cat.name}</span>
+                        
+                        <div class="flex items-center gap-2">
+                            <button onclick="app.showCategoryAttrs('${cat.id}', '${cat.name}')" class="text-xs bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded hover:text-blue-600 hover:border-blue-200 transition shadow-sm">
+                                <i class="fas fa-sliders-h mr-1"></i>属性
+                            </button>
+                            <button onclick="app.removeCategory('${cat.id}')" class="text-slate-400 hover:text-red-500 transition" title="删除类目">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                `
+              )
+              .join("");
+          },
+
+          // 切换类目
+
+          switchCategory: function (id) {
+            this.categories.forEach((c) => (c.active = c.id === id));
+
+            this.renderCategories();
+          },
+
+          // 添加类目
+
+          addCategory: function () {
+            const input = document.getElementById("new-cat-name");
+
+            const name = input.value.trim();
+
+            if (!name) return;
+
+            this.categories.push({
+              id: "c" + Date.now(),
+
+              name: name,
+
+              active: false,
+            });
+
+            input.value = "";
+
+            this.renderCategories();
+          },
+
+          // 删除类目
+
+          removeCategory: function (id) {
+            // 模拟校验：如果不是新建的空类目，禁止删除
+            if(id === 'c1' || id === 'c2') {
+                alert('禁止删除！\n该类目下已存在产品系列，请先删除所有关联系列。');
+                return;
+            }
+            
+            if (confirm("确定要删除该类目吗？")) {
+              this.categories = this.categories.filter((c) => c.id !== id);
+
+              // 如果删除了当前激活的，激活第一个
+
+              if (
+                this.categories.length > 0 &&
+                !this.categories.find((c) => c.active)
+              ) {
+                this.categories[0].active = true;
+              }
+
+              this.renderCategories();
+            }
+          },
+
+          // 打开抽屉逻辑
+
+          openDrawer: function (target, name, status) {
+            const backdrop = document.getElementById("drawer-backdrop");
+
+            let drawerId = "drawer-sku"; // 默认 SKU 抽屉
+
+            if (target === "category") {
+              drawerId = "drawer-category";
+            } else {
+              // SKU 抽屉逻辑
+
+              const nameInput = document.getElementById("input-name");
+
+              const codeInput = document.getElementById("input-code");
+
+              const statusBar = document.getElementById("drawer-status-bar");
+
+              const delBtn = document.getElementById("btn-delete");
+
+              if (target === "new") {
+                nameInput.value = "";
+
+                codeInput.value = "";
+
+                statusBar.innerHTML =
+                  '<span class="badge badge-draft">新草稿</span>';
+
+                delBtn.style.display = "none";
+              } else if (target === "copy") {
+                nameInput.value = name + "_副本";
+
+                codeInput.value = "";
+
+                statusBar.innerHTML =
+                  '<span class="badge badge-draft">复制草稿</span>';
+
+                delBtn.style.display = "none";
+              } else {
+                nameInput.value = name;
+
+                codeInput.value = "MP-TEST-001";
+
+                let badgeClass =
+                  status === "online"
+                    ? "badge-online"
+                    : status === "ready"
+                    ? "badge-ready"
+                    : "badge-draft";
+
+                let statusText =
+                  status === "online"
+                    ? "已上架"
+                    : status === "ready"
+                    ? "待上架"
+                    : "草稿";
+
+                statusBar.innerHTML = `<span class="badge ${badgeClass}">${statusText}</span>`;
+
+                if (status === "online") {
+                  delBtn.style.display = "none";
+                } else {
+                  delBtn.style.display = "flex";
+                }
+              }
+            }
+
+            const drawer = document.getElementById(drawerId);
+
+            backdrop.classList.remove("hidden");
+
+            setTimeout(() => {
+              backdrop.classList.add("open");
+
+              drawer.classList.add("open");
+            }, 10);
+
+            // 存储当前打开的抽屉 ID 以便关闭
+
+            backdrop.dataset.activeDrawer = drawerId;
+          },
+
+          closeDrawer: function () {
+            const backdrop = document.getElementById("drawer-backdrop");
+
+            const activeDrawerId =
+              backdrop.dataset.activeDrawer || "drawer-sku";
+
+            const drawer = document.getElementById(activeDrawerId);
+
+            backdrop.classList.remove("open");
+
+            if (drawer) drawer.classList.remove("open");
+
+            setTimeout(() => backdrop.classList.add("hidden"), 300);
+          },
+
+          // 批量操作栏逻辑
+
+          toggleBatchBar: function (isShow) {
+            const bar = document.getElementById("batch-bar");
+
+            const checkboxes = document.querySelectorAll(".sku-check");
+
+            if (typeof isShow === "boolean") {
+              checkboxes.forEach((c) => (c.checked = isShow));
+            }
+
+            const count = Array.from(checkboxes).filter(
+              (c) => c.checked
+            ).length;
+
+            document.getElementById("selected-count").innerText = count;
+
+            if (count > 0) {
+              bar.classList.add("show");
+            } else {
+              bar.classList.remove("show");
+            }
+          },
+
+          checkItem: function () {
+            this.toggleBatchBar();
+          },
+
+          copySku: function (btn) {
+            const row = btn.closest("tr");
+
+            const name = row.querySelector(".font-bold").innerText;
+
+            this.openDrawer("copy", name);
+          },
+
+          // 添加自定义属性 (简化版 - 仅本地有效)
+          addCustomProp: function(containerId, isAlgo = false) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            // 如果是推荐属性区，使用 grid 布局保持对齐
+            if(isAlgo) {
+                div.className = 'col-span-2 bg-blue-50 border border-blue-200 rounded p-2 animate-fade-in relative group';
+            } else {
+                div.className = 'col-span-2 flex gap-2 items-center group animate-fade-in relative bg-slate-50 p-2 rounded border border-slate-200';
+            }
+            
+            div.innerHTML = `
+              <div class="flex gap-2 w-full items-start">
+                  <div class="flex-1">
+                      <div class="flex gap-2 mb-1">
+                        <input type="text" placeholder="属性名称 (如: 颜色)" class="w-1/3 text-xs border border-slate-300 rounded px-2 py-1.5 focus:border-blue-500 outline-none font-bold">
+                        <span class="text-slate-300 self-center">:</span>
+                        <input type="text" placeholder="属性内容 (如: 红色)" class="flex-1 text-xs border border-slate-300 rounded px-2 py-1.5 focus:border-blue-500 outline-none">
+                      </div>
+                  </div>
+                  <button onclick="this.closest('.col-span-2').remove()" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i class="fas fa-times"></i></button>
+              </div>
+            `;
+            container.appendChild(div);
+          },
+
+          // 显示类目属性配置
+          showCategoryAttrs: function(id, name) {
+             document.getElementById('attr-template-config').classList.remove('hidden');
+             document.getElementById('config-cat-name').innerText = name;
+          },
+
+          // 导入弹窗控制
+          openImportModal: function() {
+              document.getElementById('import-modal').classList.remove('hidden');
+          },
+          closeImportModal: function() {
+              document.getElementById('import-modal').classList.add('hidden');
+          },
+
+          // 属性添加弹窗控制
+          openAddAttrModal: function() {
+              document.getElementById('new-attr-name').value = '';
+              document.getElementById('new-attr-unit').value = '';
+              document.getElementById('new-attr-required').checked = false;
+              document.getElementById('attr-add-modal').classList.remove('hidden');
+          },
+          closeAddAttrModal: function() {
+              document.getElementById('attr-add-modal').classList.add('hidden');
+          },
+          saveNewAttr: function() {
+              const name = document.getElementById('new-attr-name').value.trim();
+              if(!name) { alert('请输入属性名称'); return; }
+              
+              const group = document.querySelector('input[name="new-attr-group"]:checked').value;
+              const type = document.getElementById('new-attr-type').value;
+              const unit = document.getElementById('new-attr-unit').value.trim();
+              const required = document.getElementById('new-attr-required').checked;
+              
+              const groupLabel = group === 'algo' ? '推荐匹配' : '基础规格';
+              const groupClass = group === 'algo' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500';
+              
+              const typeLabel = type === 'text' ? '文本' : (type === 'number' ? '数值' : '枚举');
+              
+              const list = document.getElementById('attr-list-container');
+              const item = document.createElement('div');
+              item.className = 'flex items-center justify-between text-xs bg-white p-2 rounded border border-slate-200 animate-fade-in';
+              item.innerHTML = `
+                  <span class="font-bold text-slate-700">${name} ${unit ? `<span class="text-slate-400 font-normal">(${unit})</span>` : ''}</span>
+                  <div class="flex items-center gap-2">
+                      <span class="${groupClass} px-1.5 rounded font-bold">${groupLabel}</span>
+                      <span class="bg-slate-100 text-slate-500 px-1.5 rounded">${typeLabel}</span>
+                      ${required ? '<span class="text-red-500 font-bold">必填</span>' : ''}
+                      <button onclick="this.closest('div.flex').remove()" class="text-slate-300 hover:text-red-500 ml-1"><i class="fas fa-times"></i></button>
+                  </div>
+              `;
+              
+              list.appendChild(item);
+              this.closeAddAttrModal();
+          }
+        };
+
+        // 初始化
+
+        app.init();
+      </script>
+    </div>
+  </body>
+</html>

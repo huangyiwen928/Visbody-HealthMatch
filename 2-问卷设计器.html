@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>问卷设计器 - 极简操作版 V12.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: "Inter", "PingFang SC", sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .drawer { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: translateX(100%); position: fixed; top: 0; right: 0; height: 100%; width: 500px; z-index: 60; background-color: white; display: flex; flex-direction: column; box-shadow: -8px 0 32px rgba(0,0,0,0.15); }
+        .drawer.open { transform: translateX(0); }
+        .backdrop { transition: opacity 0.3s; opacity: 0; pointer-events: none; position: fixed; inset: 0; z-index: 50; background-color: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px); }
+        .backdrop.open { opacity: 1; pointer-events: auto; }
+        .list-row { transition: all 0.2s; border-bottom: 1px solid #f1f5f9; }
+        .list-row:hover { background-color: #f8fafc; }
+        .q-card { border: 2px solid #e2e8f0; transition: all 0.2s; position: relative; background: white; }
+        .q-card:hover { border-color: #93c5fd; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .q-card.selected { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+        .status-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 99px; display: inline-flex; align-items: center; gap: 6px; }
+        .status-draft { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .status-published { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .status-offline { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .phone-mockup { width: 320px; height: 620px; border: 12px solid #1e293b; border-radius: 2.5rem; background: #fff; position: relative; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        .phone-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 100px; height: 22px; background: #1e293b; border-radius: 0 0 14px 14px; z-index: 20; }
+        .btn-icon { width: 30px; height: 30px; border-radius: 99px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; cursor: pointer; font-size: 12px; }
+        .btn-icon:hover { background-color: #e2e8f0; }
+        .modal-content { animation: modalIn 0.2s ease-out; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        /* 智能标签样式 */
+        .smart-tag-input { background-image: linear-gradient(to right, #f5f3ff, #fff); transition: all 0.2s; }
+        .smart-tag-input:focus { background-image: none; background-color: white; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- 左侧导航 -->
+    <aside class="w-60 bg-slate-900 flex-shrink-0 flex flex-col text-slate-400">
+        <div class="h-14 flex items-center px-5 font-bold text-white border-b border-slate-800 gap-2">
+            <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-xs"><i class="fas fa-cube"></i></div>
+            配置中心
+        </div>
+        <nav class="flex-1 py-4 space-y-1">
+            <div class="px-5 text-[10px] font-bold text-slate-600 uppercase mb-2">数据资产中心</div>
+            <div class="flex items-center px-5 py-2.5 opacity-50 cursor-not-allowed"><i class="fas fa-database w-4 mr-3"></i> 元数据字典</div>
+            <div class="flex items-center px-5 py-2.5 bg-slate-800 text-white border-l-4 border-blue-500"><i class="fas fa-clipboard-list w-4 mr-3"></i> 问卷设计器</div>
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-slate-50">
+        
+        <!-- ========== 视图1: 问卷列表 ========== -->
+        <div id="view-list" class="flex flex-col h-full">
+            <header class="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
+                <h1 class="text-lg font-bold text-slate-800">问卷管理</h1>
+                <button onclick="app.createNew()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center gap-2 transition">
+                    <i class="fas fa-plus"></i> 新建问卷
+                </button>
+            </header>
+            
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- 功能说明 -->
+                <div class="mb-5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+                    <h3 class="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
+                        <span class="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-xs"><i class="fas fa-info"></i></span>
+                        核心功能说明
+                    </h3>
+                    <ul class="text-xs text-slate-600 space-y-1.5 ml-8">
+                        <li><strong class="text-blue-700">智能打标：</strong>输入选项后，系统自动生成对应的特征标签</li>
+                        <li><strong class="text-green-700">数据同步：</strong>发布后标签自动同步到【元数据字典】</li>
+                        <li><strong class="text-red-700">状态保护：</strong>通过"已发布/已下架"流转，保障线上数据安全</li>
+                    </ul>
+                </div>
+
+                <!-- 问卷列表 -->
+                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="px-5 py-3">问卷名称</th>
+                                <th class="px-5 py-3">状态</th>
+                                <th class="px-5 py-3">标签数</th>
+                                <th class="px-5 py-3">更新时间</th>
+                                <th class="px-5 py-3 text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="list-row">
+                                <td class="px-5 py-3 font-bold text-slate-700">2025门店睡眠问卷</td>
+                                <td class="px-5 py-3"><span class="status-badge status-published"><i class="fas fa-check-circle"></i> 已发布</span></td>
+                                <td class="px-5 py-3 text-slate-500">5</td>
+                                <td class="px-5 py-3 text-slate-400 text-xs">2025-01-20</td>
+                                <td class="px-5 py-3 text-right space-x-2">
+                                    <button onclick="app.openEditor('published', '2025门店睡眠问卷')" class="text-slate-600 hover:text-blue-600 font-medium">查看</button>
+                                    <button onclick="app.copyQuestionnaire('2025门店睡眠问卷')" class="text-blue-600 hover:underline font-medium">复制</button>
+                                    <button onclick="app.deleteQuestionnaire('published')" class="text-slate-400 hover:text-red-500 font-medium">删除</button>
+                                </td>
+                            </tr>
+                            <tr class="list-row">
+                                <td class="px-5 py-3 font-bold text-slate-700">体态评估问卷(草稿)</td>
+                                <td class="px-5 py-3"><span class="status-badge status-draft"><i class="fas fa-pen"></i> 草稿</span></td>
+                                <td class="px-5 py-3 text-slate-500">3</td>
+                                <td class="px-5 py-3 text-slate-400 text-xs">刚刚</td>
+                                <td class="px-5 py-3 text-right space-x-2">
+                                    <button onclick="app.openEditor('draft', '体态评估问卷(草稿)')" class="text-blue-600 hover:underline font-medium">编辑</button>
+                                    <button onclick="app.copyQuestionnaire('体态评估问卷(草稿)')" class="text-blue-600 hover:underline font-medium">复制</button>
+                                    <button onclick="app.deleteQuestionnaire('draft')" class="text-red-500 hover:underline font-medium">删除</button>
+                                </td>
+                            </tr>
+                            <tr class="list-row opacity-60">
+                                <td class="px-5 py-3 font-bold text-slate-700">旧版睡眠问卷</td>
+                                <td class="px-5 py-3"><span class="status-badge status-offline"><i class="fas fa-stop-circle"></i> 已下架</span></td>
+                                <td class="px-5 py-3 text-slate-500">4</td>
+                                <td class="px-5 py-3 text-slate-400 text-xs">2024-12-01</td>
+                                <td class="px-5 py-3 text-right space-x-2">
+                                    <button onclick="app.openEditor('offline', '旧版睡眠问卷')" class="text-slate-600 hover:text-blue-600 font-medium">查看</button>
+                                    <button onclick="app.copyQuestionnaire('旧版睡眠问卷')" class="text-blue-600 hover:underline font-medium">复制</button>
+                                    <button onclick="app.deleteQuestionnaire('offline')" class="text-slate-400 hover:text-red-500 font-medium">删除</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 视图2: 编辑器 ========== -->
+        <div id="view-editor" class="hidden flex-col h-full">
+            <!-- 风险提示条 -->
+            <div id="risk-banner" class="hidden bg-red-50 border-b border-red-200 px-6 py-2 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-red-700 text-xs font-bold">
+                    <i class="fas fa-lock"></i> 该问卷已发布，内容为只读状态
+                </div>
+                <button onclick="app.copyQuestionnaire(document.getElementById('editor-title').value)" class="text-red-600 hover:text-red-800 text-xs underline font-bold">复制为新草稿</button>
+            </div>
+
+            <header class="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="app.goBack()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500"><i class="fas fa-arrow-left"></i></button>
+                    <input type="text" id="editor-title" value="问卷名称" class="font-bold text-lg text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none w-64 px-1">
+                    <span id="editor-status" class="status-badge status-draft"><i class="fas fa-pen"></i> 草稿</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="app.saveDraft(this)" class="bg-white border border-slate-300 text-slate-600 font-bold py-2 px-4 rounded-lg text-sm hover:bg-slate-50 flex items-center gap-2">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                    <button onclick="app.openPreview()" class="bg-white border border-slate-300 text-slate-600 font-bold py-2 px-4 rounded-lg text-sm hover:bg-slate-50 flex items-center gap-2">
+                        <i class="far fa-eye"></i> 预览
+                    </button>
+                    <button id="btn-publish" onclick="app.togglePublish()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2">
+                        <i class="fas fa-paper-plane"></i> 发布
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-100">
+                <div class="max-w-2xl mx-auto space-y-4 pb-20">
+                    
+                    <!-- 题目列表容器 -->
+                    <div id="question-list" class="space-y-3 min-h-[100px]">
+                        <!-- 动态生成题目 -->
+                    </div>
+
+                    <!-- 空状态提示 -->
+                    <div id="empty-state" class="hidden flex-col items-center justify-center py-10 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm text-slate-300 text-2xl">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <h3 class="text-slate-500 font-bold text-sm mb-1">开始创建您的第一个问卷</h3>
+                        <p class="text-slate-400 text-xs mb-4">点击下方按钮添加题目</p>
+                        <i class="fas fa-arrow-down text-slate-300 animate-bounce"></i>
+                    </div>
+
+                    <!-- 添加题目 -->
+                    <div id="toolbar-add" class="grid grid-cols-2 gap-3 pt-4 border-t border-slate-200">
+                        <button class="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center gap-2 text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition" onclick="app.addQuestion('单选题')">
+                            <i class="far fa-dot-circle text-xl text-blue-400"></i>
+                            <span class="text-xs font-bold">+ 单选题</span>
+                        </button>
+                        <button class="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center gap-2 text-slate-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition" onclick="app.addQuestion('多选题')">
+                            <i class="far fa-check-square text-xl text-green-400"></i>
+                            <span class="text-xs font-bold">+ 多选题</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 遮罩 -->
+    <div id="backdrop" onclick="app.closeAll()" class="backdrop"></div>
+
+    <!-- 编辑抽屉 -->
+    <aside id="drawer-edit" class="drawer">
+        <div class="h-14 border-b border-slate-100 flex justify-between items-center px-5 bg-slate-50 flex-shrink-0">
+            <div>
+                <h3 class="font-bold text-slate-800">编辑题目</h3>
+                <span id="drawer-type" class="text-[10px] text-slate-500">单选题</span>
+            </div>
+            <button onclick="app.closeAll()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-5 space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-2">题干内容</label>
+                <textarea id="drawer-title" class="w-full border border-slate-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500 h-20 resize-none" placeholder="请输入问题，例如：您平时的睡眠时长是？"></textarea>
+            </div>
+            <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-slate-500">是否必填</label>
+                <input type="checkbox" id="drawer-required" class="w-5 h-5 accent-blue-600">
+            </div>
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-bold text-slate-500">选项与标签配置</label>
+                </div>
+                <!-- 智能标签提示 -->
+                <div class="bg-purple-50 border border-purple-100 rounded-lg p-3 mb-3 flex gap-3">
+                    <i class="fas fa-magic text-purple-500 mt-0.5"></i>
+                    <div>
+                        <div class="text-xs font-bold text-purple-700 mb-0.5">智能填充开启</div>
+                        <div class="text-[10px] text-purple-600 leading-tight">输入选项时，系统自动生成标签。大部分情况下您<strong>无需修改标签</strong>。</div>
+                    </div>
+                </div>
+                <div id="option-list" class="space-y-2">
+                    <!-- 动态生成 -->
+                </div>
+                <button class="w-full border border-dashed border-slate-300 rounded-lg py-2 text-xs font-bold text-slate-500 hover:border-blue-400 hover:text-blue-600 mt-3" onclick="app.addOption()">+ 添加选项</button>
+            </div>
+        </div>
+        <div class="p-5 border-t border-slate-100">
+            <button onclick="app.saveQuestion()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700">完成编辑</button>
+        </div>
+    </aside>
+
+    <!-- 预览弹窗 -->
+    <div id="modal-preview" class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none opacity-0 transition-opacity bg-black/60">
+        <div class="phone-mockup pointer-events-auto modal-content">
+            <div class="phone-notch"></div>
+            <div class="h-12 bg-white border-b border-slate-100 flex items-end justify-center pb-2">
+                <span class="font-bold text-slate-800 text-sm">健康评估问卷</span>
+            </div>
+            <div class="h-full bg-slate-50 overflow-y-auto pt-3 pb-20 px-3">
+                <div id="preview-content" class="space-y-4">
+                    <!-- 预览内容动态生成 -->
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full p-3 bg-white border-t border-slate-100">
+                <button onclick="alert('✅ 提交成功！\\n\\n后台已收到数据并生成标签。')" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-full text-sm">提交</button>
+            </div>
+        </div>
+        <button onclick="app.closeAll()" class="absolute top-8 right-8 w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 pointer-events-auto shadow-lg">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- 校验失败弹窗 -->
+    <div id="modal-errors" class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none opacity-0 transition-opacity bg-black/40">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg pointer-events-auto modal-content">
+            <div class="border-b border-red-100 px-5 py-4 bg-red-50 rounded-t-xl flex items-center gap-3">
+                <div class="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center"><i class="fas fa-exclamation-triangle"></i></div>
+                <div>
+                    <h3 class="font-bold text-slate-800">发布校验失败</h3>
+                    <p class="text-xs text-slate-500">请修复以下问题后重试</p>
+                </div>
+            </div>
+            <div class="p-5 max-h-60 overflow-y-auto space-y-2">
+                <div class="border border-red-100 bg-red-50 rounded-lg p-3 text-sm cursor-pointer hover:bg-red-100" onclick="app.locateError(1)">
+                    <i class="fas fa-times-circle text-red-500 mr-2"></i>
+                    <span class="text-slate-700">标签名称【打鼾】重复，请修改</span>
+                </div>
+            </div>
+            <div class="border-t border-slate-100 px-5 py-3 flex justify-end gap-2">
+                <button onclick="app.closeAll()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg font-bold hover:bg-slate-100">关闭</button>
+                <button onclick="app.locateError(1)" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">定位修复</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var app = {
+            currentStatus: 'draft',
+            currentCard: null,
+
+            // === 列表视图 ===
+            openEditor: function(status, title) {
+                this.currentStatus = status;
+                document.getElementById('view-list').classList.add('hidden');
+                document.getElementById('view-editor').classList.remove('hidden');
+                document.getElementById('view-editor').classList.add('flex');
+                document.getElementById('editor-title').value = title || '未命名问卷';
+                
+                // 模拟加载题目数据
+                document.getElementById('question-list').innerHTML = '';
+                if (title !== '未命名问卷') {
+                    // 加载示例数据
+                    this.addQuestionToUI('单选题', '您的日常睡姿？', true, [
+                        {text: '侧卧', tag: '侧卧'}, {text: '仰卧', tag: '仰卧'}
+                    ]);
+                    this.addQuestionToUI('多选题', '您有以下哪些睡眠问题？', false, [
+                        {text: '打鼾', tag: '打鼾'}, {text: '失眠', tag: '失眠'}
+                    ]);
+                }
+
+                this.updateEditorUI();
+                this.checkEmptyState();
+                
+                if (status !== 'draft') {
+                    var statusText = status === 'published' ? '已发布' : '已下架';
+                    setTimeout(function() {
+                        alert('📌 提示\n\n该问卷为"' + statusText + '"状态，内容只读。\n\n如需修改，请点击"复制"创建新草稿。');
+                    }, 100);
+                }
+            },
+
+            createNew: function() {
+                this.currentStatus = 'draft';
+                document.getElementById('view-list').classList.add('hidden');
+                document.getElementById('view-editor').classList.remove('hidden');
+                document.getElementById('view-editor').classList.add('flex');
+                document.getElementById('editor-title').value = '未命名问卷';
+                document.getElementById('question-list').innerHTML = '';
+                this.updateEditorUI();
+                this.checkEmptyState();
+            },
+
+            saveDraft: function(btn) {
+                if (this.currentStatus !== 'draft') {
+                    alert('👀 当前为只读状态，无需保存。');
+                    return;
+                }
+                var originalContent = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+                btn.disabled = true;
+                btn.classList.add('opacity-75');
+                
+                setTimeout(function() {
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75');
+                    alert('✅ 保存成功！\n\n问卷草稿已更新。');
+                }, 600);
+            },
+
+            copyQuestionnaire: function(title) {
+                var self = this;
+                if (confirm('📋 复制问卷\n\n将基于"' + title + '"创建新草稿。\n\n• 继承所有题目和标签配置\n• 状态重置为草稿\n\n确认复制？')) {
+                    self.currentStatus = 'draft';
+                    document.getElementById('view-list').classList.add('hidden');
+                    document.getElementById('view-editor').classList.remove('hidden');
+                    document.getElementById('view-editor').classList.add('flex');
+                    document.getElementById('editor-title').value = title + '_副本';
+                    
+                    // 复制时保留当前题目（如果是从列表页复制，这里简单处理为加载示例）
+                    if (document.getElementById('question-list').children.length === 0) {
+                        self.addQuestionToUI('单选题', '您的日常睡姿？', true, [{text:'侧卧',tag:'侧卧'},{text:'仰卧',tag:'仰卧'}]);
+                    }
+
+                    self.updateEditorUI();
+                    self.checkEmptyState();
+                    setTimeout(function() {
+                        alert('✅ 复制成功！\n\n已创建新草稿，可自由编辑。');
+                    }, 100);
+                }
+            },
+
+            deleteQuestionnaire: function(status) {
+                if (status === 'published') {
+                    alert('❌ 无法删除\n\n已发布的问卷不能直接删除。\n请先【下架】后再删除。');
+                    return;
+                }
+                if (confirm('⚠️ 确定删除此问卷？\n\n此操作不可恢复！')) {
+                    alert('✅ 删除成功');
+                }
+            },
+
+            goBack: function() {
+                if (this.currentStatus === 'draft' && document.getElementById('question-list').children.length > 0) {
+                     // 简单模拟离开确认
+                     // if(!confirm('是否保存草稿并退出？')) return;
+                }
+                document.getElementById('view-editor').classList.add('hidden');
+                document.getElementById('view-editor').classList.remove('flex');
+                document.getElementById('view-list').classList.remove('hidden');
+            },
+
+            // === UI 辅助 ===
+            checkEmptyState: function() {
+                var list = document.getElementById('question-list');
+                var emptyState = document.getElementById('empty-state');
+                if (list.children.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    emptyState.classList.add('flex');
+                } else {
+                    emptyState.classList.add('hidden');
+                    emptyState.classList.remove('flex');
+                }
+            },
+
+            updateEditorUI: function() {
+                var badge = document.getElementById('editor-status');
+                var btn = document.getElementById('btn-publish');
+                var banner = document.getElementById('risk-banner');
+                var toolbar = document.getElementById('toolbar-add');
+                var titleInput = document.getElementById('editor-title');
+
+                toolbar.style.pointerEvents = '';
+                toolbar.style.opacity = '';
+                
+                if (this.currentStatus === 'published') {
+                    badge.className = 'status-badge status-published';
+                    badge.innerHTML = '<i class="fas fa-check-circle"></i> 已发布';
+                    btn.innerHTML = '<i class="fas fa-stop-circle"></i> 下架';
+                    btn.className = 'bg-amber-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-amber-700 flex items-center gap-2';
+                    banner.classList.remove('hidden');
+                    toolbar.style.pointerEvents = 'none';
+                    toolbar.style.opacity = '0.5';
+                    titleInput.readOnly = true;
+                } else if (this.currentStatus === 'offline') {
+                    badge.className = 'status-badge status-offline';
+                    badge.innerHTML = '<i class="fas fa-stop-circle"></i> 已下架';
+                    btn.innerHTML = '<i class="fas fa-redo"></i> 重新上架';
+                    btn.className = 'bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-green-700 flex items-center gap-2';
+                    banner.classList.add('hidden');
+                    toolbar.style.pointerEvents = 'none';
+                    toolbar.style.opacity = '0.5';
+                    titleInput.readOnly = true;
+                } else {
+                    badge.className = 'status-badge status-draft';
+                    badge.innerHTML = '<i class="fas fa-pen"></i> 草稿';
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> 发布';
+                    btn.className = 'bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2';
+                    banner.classList.add('hidden');
+                    toolbar.style.pointerEvents = 'auto';
+                    toolbar.style.opacity = '1';
+                    titleInput.readOnly = false;
+                }
+            },
+
+            togglePublish: function() {
+                var self = this;
+                if (this.currentStatus === 'draft') {
+                    var list = document.getElementById('question-list');
+                    if (list.children.length === 0) {
+                        alert('❌ 发布失败\n\n问卷至少需要1个题目');
+                        return;
+                    }
+                    if (confirm('✅ 校验通过！\n\n发布后：\n• 内容锁定不可编辑\n• 标签同步到元数据字典\n• C端可见\n\n确认发布？')) {
+                        self.currentStatus = 'published';
+                        self.updateEditorUI();
+                        alert('🎉 发布成功！\n\n标签已同步到元数据字典。');
+                    }
+                } else if (this.currentStatus === 'published') {
+                    if (confirm('📦 确认下架？\n\n下架后C端不再显示此问卷，但历史数据保留。')) {
+                        self.currentStatus = 'offline';
+                        self.updateEditorUI();
+                        alert('✅ 已下架');
+                    }
+                } else {
+                    if (confirm('🔄 确认重新上架？\n\n上架后C端将重新显示此问卷。')) {
+                        self.currentStatus = 'published';
+                        self.updateEditorUI();
+                        alert('✅ 已重新上架');
+                    }
+                }
+            },
+
+            // === 题目核心逻辑 ===
+            addQuestion: function(type) {
+                this.addQuestionToUI(type, '点击编辑题目...', false, []);
+            },
+
+            addQuestionToUI: function(type, titleText, required, options) {
+                if (this.currentStatus !== 'draft' && document.getElementById('question-list').children.length > 0) {
+                     // 仅在手动添加时阻断
+                     if(event && event.type === 'click') {
+                         alert('❌ 无法添加\n\n当前为只读状态。');
+                         return;
+                     }
+                }
+
+                var list = document.getElementById('question-list');
+                var index = list.children.length + 1;
+                var indexStr = index < 10 ? '0' + index : index;
+                var isMulti = type === '多选题';
+                var typeClass = isMulti ? 'bg-green-100 text-green-600 border-green-200' : 'bg-blue-100 text-blue-600 border-blue-200';
+                var requiredHtml = required ? ' <span class="text-[10px] text-red-500">*必填</span>' : '';
+
+                var card = document.createElement('div');
+                card.className = 'q-card bg-white p-5 rounded-xl cursor-pointer group';
+                card.setAttribute('data-type', type);
+                card.onclick = function() { app.editQuestion(this); };
+
+                // 构建选项预览HTML
+                var optionsHtml = '';
+                if (options && options.length > 0) {
+                    optionsHtml = '<div class="space-y-1.5">';
+                    var icon = isMulti ? 'far fa-square' : 'far fa-circle';
+                    for(var i=0; i<options.length; i++) {
+                        optionsHtml += '<div class="flex justify-between items-center p-2 border border-slate-100 rounded bg-slate-50 text-sm">' +
+                            '<span class="text-slate-700"><i class="' + icon + ' mr-2 text-slate-400"></i>' + options[i].text + '</span>' +
+                            '<span class="text-[10px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded"><i class="fas fa-tag mr-1"></i>' + options[i].tag + '</span>' +
+                            '</div>';
+                    }
+                    optionsHtml += '</div>';
+                } else {
+                    optionsHtml = '<div class="options-preview text-sm text-slate-400 italic">尚未配置选项</div>';
+                }
+
+                card.innerHTML = '<div class="flex gap-3">' +
+                    '<span class="font-bold text-lg text-slate-300 index-label">' + indexStr + '.</span>' +
+                    '<div class="flex-1">' +
+                    '<h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2 q-title">' +
+                    titleText +
+                    '<span class="text-[10px] ' + typeClass + ' px-2 py-0.5 rounded border">' + type + '</span>' +
+                    requiredHtml +
+                    '</h3>' +
+                    '<div class="options-preview">' + optionsHtml + '</div>' +
+                    '</div></div>' +
+                    '<div class="absolute right-3 top-1/2 -translate-y-1/2 flex-col gap-1 hidden group-hover:flex">' +
+                    '<div class="btn-icon bg-slate-100" title="上移" onclick="app.moveQuestion(this,\'up\',event)"><i class="fas fa-arrow-up"></i></div>' +
+                    '<div class="btn-icon bg-slate-100" title="下移" onclick="app.moveQuestion(this,\'down\',event)"><i class="fas fa-arrow-down"></i></div>' +
+                    '<div class="btn-icon bg-slate-100 hover:bg-red-50 hover:text-red-600" title="删除" onclick="app.deleteQuestion(this,event)"><i class="fas fa-trash"></i></div>' +
+                    '</div>';
+                
+                list.appendChild(card);
+                this.checkEmptyState();
+                
+                // 如果是手动点击添加，自动打开编辑器
+                if(event && event.type === 'click') {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    var self = this;
+                    setTimeout(function() { self.editQuestion(card); }, 200);
+                }
+            },
+
+            moveQuestion: function(btn, dir, e) {
+                e.stopPropagation();
+                if (this.currentStatus !== 'draft') return;
+                var card = btn.closest('.q-card');
+                var parent = card.parentNode;
+                if (dir === 'up' && card.previousElementSibling) parent.insertBefore(card, card.previousElementSibling);
+                if (dir === 'down' && card.nextElementSibling) parent.insertBefore(card.nextElementSibling, card);
+                this.reindex();
+            },
+
+            deleteQuestion: function(btn, e) {
+                e.stopPropagation();
+                if (this.currentStatus !== 'draft') {
+                    alert('❌ 无法删除\n\n当前为只读状态。');
+                    return;
+                }
+                if (confirm('确定删除此题目？')) {
+                    btn.closest('.q-card').remove();
+                    this.reindex();
+                    this.checkEmptyState();
+                }
+            },
+
+            reindex: function() {
+                var labels = document.querySelectorAll('#question-list .index-label');
+                for (var i = 0; i < labels.length; i++) {
+                    labels[i].textContent = (i + 1 < 10 ? '0' : '') + (i + 1) + '.';
+                }
+            },
+
+            // === 编辑抽屉逻辑 ===
+            editQuestion: function(card) {
+                if (this.currentStatus !== 'draft') {
+                    var statusText = this.currentStatus === 'published' ? '已发布' : '已下架';
+                    alert('👀 只读模式\n\n当前为"' + statusText + '"状态，只能查看。');
+                    return;
+                }
+                this.currentCard = card;
+                var allCards = document.querySelectorAll('.q-card');
+                for (var i = 0; i < allCards.length; i++) {
+                    allCards[i].classList.remove('selected');
+                }
+                card.classList.add('selected');
+
+                var type = card.getAttribute('data-type') || '单选题';
+                document.getElementById('drawer-type').textContent = type;
+                
+                // 解析标题
+                var titleHTML = card.querySelector('.q-title').innerHTML;
+                var tempDiv = document.createElement('div');
+                tempDiv.innerHTML = titleHTML;
+                // 移除标签 span 得到纯文本
+                var spans = tempDiv.querySelectorAll('span');
+                for(var j=0; j<spans.length; j++) spans[j].remove();
+                var titleText = tempDiv.textContent.trim();
+                if(titleText === '点击编辑题目...') titleText = '';
+                
+                document.getElementById('drawer-title').value = titleText;
+                document.getElementById('drawer-required').checked = titleHTML.indexOf('*必填') > -1;
+
+                var list = document.getElementById('option-list');
+                list.innerHTML = '';
+                
+                // 解析现有选项
+                var previewDiv = card.querySelector('.options-preview');
+                var optionItems = previewDiv.querySelectorAll('.flex.justify-between'); // 查找预览里的行
+                
+                if (optionItems.length > 0) {
+                    for(var i=0; i<optionItems.length; i++) {
+                        var textSpan = optionItems[i].children[0];
+                        var tagSpan = optionItems[i].children[1];
+                        var text = textSpan.textContent.trim();
+                        var tag = tagSpan.textContent.trim();
+                        this.addOption(text, tag);
+                    }
+                } else {
+                    // 默认空选项
+                    this.addOption('', '');
+                    this.addOption('', '');
+                }
+
+                this.showDrawer('drawer-edit');
+            },
+
+            addOption: function(text, tag) {
+                var list = document.getElementById('option-list');
+                var div = document.createElement('div');
+                div.className = 'option-item border border-slate-200 rounded-lg p-2.5 bg-white shadow-sm';
+                
+                var tagValue = tag || text || '';
+                var textValue = text || '';
+                
+                div.innerHTML = '<div class="flex items-center gap-2 mb-2">' +
+                    '<span class="w-5 h-5 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xs">●</span>' +
+                    '<input type="text" value="' + textValue + '" class="opt-text flex-1 border-b border-transparent border-slate-100 focus:border-blue-500 outline-none text-sm font-bold py-1" placeholder="输入选项..." oninput="app.syncTagFromOption(this)">' +
+                    '<button onclick="app.removeOption(this)" class="text-slate-300 hover:text-red-500 px-1"><i class="fas fa-times"></i></button>' +
+                    '</div>' +
+                    '<div class="ml-7 flex items-center gap-2 bg-purple-50 rounded-md p-1.5 border border-purple-100">' +
+                    '<i class="fas fa-tag text-purple-400 text-xs"></i>' +
+                    '<input type="text" value="' + tagValue + '" class="opt-tag smart-tag-input flex-1 bg-transparent text-xs text-purple-600 outline-none font-medium" placeholder="标签自动生成" onfocus="this.dataset.modified=true">' +
+                    '</div>';
+                list.appendChild(div);
+            },
+            
+            syncTagFromOption: function(input) {
+                var optionItem = input.closest('.option-item');
+                var tagInput = optionItem.querySelector('.opt-tag');
+                // 只有当用户没有手动修改过标签时，才自动同步
+                if (!tagInput.dataset.modified) {
+                    tagInput.value = input.value;
+                }
+            },
+
+            removeOption: function(btn) {
+                var list = document.getElementById('option-list');
+                if (list.children.length <= 2) {
+                    alert('⚠️ 至少保留2个选项');
+                    return;
+                }
+                btn.closest('.option-item').remove();
+            },
+
+            saveQuestion: function() {
+                if (!this.currentCard) return;
+                var title = document.getElementById('drawer-title').value.trim() || '未命名题目';
+                var required = document.getElementById('drawer-required').checked;
+                var type = this.currentCard.getAttribute('data-type') || '单选题';
+                var isMulti = type === '多选题';
+                var typeClass = isMulti ? 'bg-green-100 text-green-600 border-green-200' : 'bg-blue-100 text-blue-600 border-blue-200';
+                var icon = isMulti ? 'far fa-square' : 'far fa-circle';
+
+                // 更新标题
+                var titleHtml = title + ' <span class="text-[10px] ' + typeClass + ' px-2 py-0.5 rounded border">' + type + '</span>';
+                if (required) {
+                    titleHtml += ' <span class="text-[10px] text-red-500">*必填</span>';
+                }
+                this.currentCard.querySelector('.q-title').innerHTML = titleHtml;
+
+                // 更新选项预览
+                var options = document.querySelectorAll('#option-list .option-item');
+                var html = '<div class="space-y-1.5">';
+                for (var i = 0; i < options.length; i++) {
+                    var opt = options[i];
+                    var text = opt.querySelector('.opt-text').value || '未命名选项';
+                    var tag = opt.querySelector('.opt-tag').value || text; 
+                    html += '<div class="flex justify-between items-center p-2 border border-slate-100 rounded bg-slate-50 text-sm">';
+                    html += '<span class="text-slate-700"><i class="' + icon + ' mr-2 text-slate-400"></i>' + text + '</span>';
+                    html += '<span class="text-[10px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded"><i class="fas fa-tag mr-1"></i>' + tag + '</span>';
+                    html += '</div>';
+                }
+                html += '</div>';
+                this.currentCard.querySelector('.options-preview').innerHTML = html;
+
+                this.closeAll();
+            },
+
+            // === 弹窗和抽屉通用 ===
+            showDrawer: function(id) {
+                document.getElementById('backdrop').classList.add('open');
+                document.getElementById(id).classList.add('open');
+            },
+
+            showModal: function(id) {
+                document.getElementById('backdrop').classList.add('open');
+                var modal = document.getElementById(id);
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modal.classList.add('opacity-100', 'pointer-events-auto');
+            },
+
+            openPreview: function() {
+                var list = document.getElementById('question-list');
+                var previewContainer = document.getElementById('preview-content');
+                
+                if(list.children.length === 0) {
+                    alert('请先添加题目');
+                    return;
+                }
+                
+                // 简单克隆题目内容用于预览
+                previewContainer.innerHTML = '';
+                var questions = list.querySelectorAll('.q-card');
+                questions.forEach(function(q, idx) {
+                    var type = q.getAttribute('data-type');
+                    var isMulti = type === '多选题';
+                    var title = q.querySelector('.q-title').textContent.replace(/单选题|多选题|\*必填/g, '').trim();
+                    var required = q.querySelector('.q-title').innerHTML.indexOf('*必填') > -1;
+                    var opts = q.querySelectorAll('.options-preview .flex');
+                    
+                    var qDiv = document.createElement('div');
+                    qDiv.className = 'bg-white p-3 rounded-lg shadow-sm border border-slate-100';
+                    var labelHtml = '<div class="text-sm font-bold text-slate-800 mb-1">' + (idx+1) + '. ' + title;
+                    if(required) labelHtml += ' <span class="text-red-500">*</span>';
+                    labelHtml += '</div>';
+                    
+                    var optsHtml = '<div class="space-y-2 mt-2">';
+                    opts.forEach(function(o, oIdx) {
+                        var text = o.children[0].textContent.trim();
+                        var inputType = isMulti ? 'checkbox' : 'radio';
+                        var name = 'preview_q' + idx;
+                        var color = isMulti ? 'green' : 'blue';
+                        optsHtml += '<label class="flex items-center gap-2 p-2 border border-slate-200 rounded cursor-pointer hover:border-' + color + '-500 bg-white">' +
+                            '<input type="' + inputType + '" name="' + name + '" class="accent-' + color + '-600 w-4 h-4">' +
+                            '<span class="text-sm text-slate-600">' + text + '</span>' +
+                            '</label>';
+                    });
+                    optsHtml += '</div>';
+                    
+                    qDiv.innerHTML = labelHtml + optsHtml;
+                    previewContainer.appendChild(qDiv);
+                });
+
+                this.showModal('modal-preview');
+            },
+
+            locateError: function(index) {
+                var self = this;
+                this.closeAll();
+                var cards = document.querySelectorAll('#question-list .q-card');
+                if (cards[index]) {
+                    cards[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(function() { self.editQuestion(cards[index]); }, 300);
+                }
+            },
+
+            closeAll: function() {
+                document.getElementById('backdrop').classList.remove('open');
+                var drawers = document.querySelectorAll('.drawer');
+                for (var i = 0; i < drawers.length; i++) {
+                    drawers[i].classList.remove('open');
+                }
+                var modalIds = ['modal-preview', 'modal-errors'];
+                for (var j = 0; j < modalIds.length; j++) {
+                    var m = document.getElementById(modalIds[j]);
+                    if (m) {
+                        m.classList.remove('opacity-100', 'pointer-events-auto');
+                        m.classList.add('opacity-0', 'pointer-events-none');
+                    }
+                }
+                var cards = document.querySelectorAll('.q-card');
+                for (var k = 0; k < cards.length; k++) {
+                    cards[k].classList.remove('selected');
+                }
+                this.currentCard = null;
+            }
+        };
+    </script>
+</body>
+</html>

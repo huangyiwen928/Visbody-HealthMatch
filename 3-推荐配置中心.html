@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推荐策略中心 - V25.7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', "PingFang SC", sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; }
+        
+        /* --- 布局 --- */
+        .layout-container { display: flex; height: 100vh; overflow: hidden; }
+        
+        /* --- 导航 --- */
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: #94a3b8;
+            border-left: 4px solid transparent;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { background-color: #1e293b; color: white; }
+        .nav-item.active { background-color: #1e293b; color: white; border-left-color: #3b82f6; }
+
+        /* --- 状态徽标 --- */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.125rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 700;
+            border: 1px solid;
+        }
+        .badge-online { background-color: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+        .badge-draft { background-color: #f1f5f9; color: #64748b; border-color: #e2e8f0; border-style: dashed; }
+        .badge-history { background-color: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+
+        /* --- 卡片与列表 --- */
+        .strategy-card {
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .strategy-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .strategy-header {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .strategy-body {
+            padding: 1rem;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        
+        /* --- 抽屉动画 --- */
+        .drawer-backdrop {
+            background-color: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(2px);
+            transition: opacity 0.3s;
+            opacity: 0;
+            pointer-events: none;
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+        }
+        .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+        
+        .drawer {
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: -8px 0 32px rgba(0,0,0,0.15);
+            transform: translateX(100%);
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            z-index: 50;
+            background-color: white;
+            display: flex;
+        }
+        .drawer.open { transform: translateX(0); }
+
+        /* --- 规则卡片样式 (详情页) --- */
+        .rule-item {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+            align-items: center;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            margin-bottom: 0.75rem;
+        }
+        .rule-item:hover { border-color: #93c5fd; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
+        
+        /* --- 通用组件 --- */
+        .input-std {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.2s;
+            background-color: white;
+        }
+        .input-std:focus { border-color: #3b82f6; box-shadow: 0 0 0 1px #dbeafe; }
+
+        /* --- 结果卡片 (抽屉内) --- */
+        .outcome-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            background-color: white;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        .outcome-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: #f8fafc;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .outcome-body { padding: 1rem; }
+        
+        .funnel-connector {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 2px dashed #e2e8f0;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            position: relative;
+        }
+        .funnel-connector::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 0.75rem;
+            height: 0.125rem;
+            background-color: #e2e8f0;
+            transform: translateY(-50%);
+        }
+        
+        .attr-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: #f8fafc;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 动画 */
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+<div class="layout-container">
+    
+    <aside class="w-64 bg-slate-900 flex-shrink-0 flex flex-col z-50">
+        <div class="h-16 flex items-center px-6 font-bold text-white border-b border-slate-800 text-lg gap-2">
+            <div class="w-7 h-7 bg-blue-600 rounded flex items-center justify-center text-xs shadow-lg"><i class="fas fa-cube"></i></div>
+            配置中心
+        </div>
+        <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
+            <div class="px-6 text-[10px] font-bold text-slate-600 uppercase mb-2 tracking-wider">推荐策略中心</div>
+            <div class="nav-item active" onclick="app.nav('list')" id="nav-list">
+                <i class="fas fa-sitemap w-5 mr-3"></i> 策略包管理
+            </div>
+        </nav>
+        <div class="p-4 border-t border-slate-800 text-xs text-slate-500">
+            V25.7 (Strategy Group)
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative overflow-hidden">
+
+        <!-- 视图: 策略列表 -->
+        <div id="view-list" class="absolute inset-0 flex flex-col h-full z-10">
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0">
+                <h1 class="text-xl font-bold text-slate-800">策略包管理</h1>
+                <div class="flex gap-3">
+                    <div class="relative">
+                        <input type="text" placeholder="搜索策略名称..." class="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:border-blue-500 outline-none transition bg-white shadow-sm">
+                        <i class="fas fa-search absolute left-3 top-3 text-slate-400"></i>
+                    </div>
+                    <button onclick="app.openModal('modal-create')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm flex items-center gap-2 active:scale-95 transition">
+                        <i class="fas fa-plus"></i> 新建策略包
+                    </button>
+                </div>
+            </header>
+
+            <div class="p-8 overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 卡片 1 -->
+                    <div class="strategy-card group" onclick="app.toDetail()">
+                        <div class="strategy-header">
+                            <div>
+                                <h3 class="font-bold text-slate-800">2025 门店通用枕头策略</h3>
+                                <div class="text-xs text-slate-400 font-mono mt-1">ST-2025-001</div>
+                            </div>
+                            <span class="badge badge-draft">Draft</span>
+                        </div>
+                        <div class="strategy-body">
+                            <div class="flex justify-between">
+                                <span>关联品类:</span>
+                                <span class="font-bold text-slate-700">枕头</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>包含规则:</span>
+                                <span class="text-slate-700">5 条</span>
+                            </div>
+                        </div>
+                        <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center opacity-0 group-hover:opacity-100 transition">
+                            <span class="text-xs text-slate-400">上次编辑: 2小时前</span>
+                            <div class="flex items-center gap-3">
+                                <button class="text-blue-600 text-xs font-bold flex items-center gap-1">配置规则 <i class="fas fa-arrow-right"></i></button>
+                                <button onclick="app.openModal('modal-delete')" class="text-red-500 text-xs font-bold">删除</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 卡片 2 -->
+                    <div class="strategy-card group">
+                        <div class="strategy-header">
+                            <div>
+                                <h3 class="font-bold text-slate-800">夏季凉感床垫大促</h3>
+                                <div class="text-xs text-slate-400 font-mono mt-1">ST-2025-002</div>
+                            </div>
+                            <span class="badge badge-online">Online</span>
+                        </div>
+                        <div class="strategy-body">
+                            <div class="flex justify-between">
+                                <span>关联品类:</span>
+                                <span class="font-bold text-slate-700">床垫</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>包含规则:</span>
+                                <span class="text-slate-700">3 条</span>
+                            </div>
+                        </div>
+                        <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center opacity-0 group-hover:opacity-100 transition">
+                            <span class="text-xs text-slate-400">运行中</span>
+                            <div class="flex items-center gap-3">
+                                <button class="text-blue-600 text-xs font-bold flex items-center gap-1">查看详情 <i class="fas fa-arrow-right"></i></button>
+                                <span class="text-xs text-slate-300 font-bold">删除</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 视图: 策略详情 -->
+        <div id="view-detail" class="absolute inset-0 flex flex-col h-full bg-slate-50 z-0 hidden">
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0 shadow-sm z-20">
+                <div class="flex items-center gap-4">
+                    <button onclick="app.toList()" class="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition"><i class="fas fa-arrow-left"></i></button>
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            2025 门店通用枕头策略 
+                            <span class="badge badge-draft text-xs">Draft</span>
+                        </h1>
+                        <div class="text-xs text-slate-500 mt-0.5 flex gap-3">
+                            <span>品类: <strong>枕头</strong></span>
+                            <span>ID: <strong>ST-2025-001</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="app.openModal('modal-simulate')" class="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-50 transition shadow-sm">
+                        <i class="fas fa-flask mr-1"></i> 模拟测试
+                    </button>
+                    <button onclick="app.openModal('modal-publish')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md transition flex items-center gap-2">
+                        <i class="fas fa-rocket"></i> 发布上线
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                
+                <!-- 全局策略设置 -->
+                <section class="bg-slate-100 border border-slate-200 rounded-xl p-4">
+                    <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm">
+                        <i class="fas fa-cog text-slate-500"></i> 全局策略设置
+                    </h3>
+                    <div class="grid grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">推荐数量 (Top N)</label>
+                            <select class="input-std text-sm bg-white">
+                                <option>1</option>
+                                <option>2</option>
+                                <option selected>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">排序偏好</label>
+                            <select class="input-std text-sm bg-white">
+                                <option selected>匹配度优先 (默认)</option>
+                                <option>销量热度优先</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">兜底 SKU</label>
+                            <div class="bg-white border border-slate-200 rounded-lg p-3">
+                                <p class="text-xs text-slate-500 mb-2">仅支持指定 1 个 SKU：</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="bg-slate-50 border border-slate-200 px-2 py-1 rounded text-xs flex items-center gap-1">
+                                        深睡护脊枕（硬/高）<button class="text-slate-300 hover:text-red-500"><i class="fas fa-times"></i></button>
+                                    </span>
+                                    <button class="text-xs text-blue-600 hover:underline">+ 选择SKU</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 禁忌规则区域 -->
+                <section class="bg-white border border-red-100 rounded-xl shadow-sm overflow-hidden">
+                    <div class="bg-red-50/50 px-4 py-3 border-b border-red-100 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded bg-red-100 text-red-600 flex items-center justify-center text-xs"><i class="fas fa-shield-alt"></i></div>
+                            <h3 class="text-sm font-bold text-red-800">熔断禁忌规则 (Fuse Rules)</h3>
+                        </div>
+                        <button onclick="app.openModal('modal-fuse')" class="text-xs text-red-600 hover:bg-red-100 px-3 py-1.5 rounded transition border border-red-200 font-bold flex items-center gap-1">
+                            <i class="fas fa-plus"></i> 添加禁忌
+                        </button>
+                    </div>
+                    <div class="p-4">
+                        <div class="bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-4 text-sm group hover:border-red-300 transition">
+                            <span class="font-bold text-slate-400 bg-white border px-1.5 rounded text-xs">IF</span>
+                            <span class="font-bold text-red-700">乳胶过敏</span>
+                            <span class="font-bold text-slate-400 bg-white border px-1.5 rounded text-xs">THEN EXCLUDE</span>
+                            <span class="font-mono text-slate-600">材质 = 天然乳胶</span>
+                            <button class="ml-auto text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 正向规则列表 -->
+                <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-list-ol text-blue-600"></i> 正向匹配规则列表
+                        </h3>
+                        <button onclick="app.openDrawer()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-sm">
+                            <i class="fas fa-plus mr-1"></i> 添加规则
+                        </button>
+                    </div>
+
+                    <div class="rule-item group">
+                        <div class="col-span-1 text-center font-bold text-slate-300 text-xl">1</div>
+                        <div class="col-span-4 border-r border-slate-100 pr-4">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold mb-2">IF 用户特征</div>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs border border-blue-100 font-bold">颈椎评分 > 30</span>
+                                <span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-xs border border-purple-100 font-bold">侧睡</span>
+                            </div>
+                        </div>
+                        <div class="col-span-5 pl-2">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold mb-2">THEN 推荐方案</div>
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 text-xs bg-green-50 p-1.5 rounded border border-green-100 w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                    <span class="font-bold text-slate-700">A: 深睡护脊系列 (硬/高)</span>
+                                    <span class="text-slate-400 font-mono">[100]</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs opacity-70 px-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                                    <span class="font-bold text-slate-700">B: 舒缓记忆棉 (无限制)</span>
+                                    <span class="text-slate-400 font-mono">[60]</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-span-2 text-right opacity-0 group-hover:opacity-100 transition space-x-2">
+                            <button onclick="app.openDrawer()" class="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded hover:bg-blue-100">编辑</button>
+                            <button class="text-red-400 font-bold text-xs bg-red-50 px-2 py-1 rounded hover:bg-red-100">删除</button>
+                        </div>
+                    </div>
+
+                    <div class="rule-item group">
+                        <div class="col-span-1 text-center font-bold text-slate-300 text-xl">2</div>
+                        <div class="col-span-4 border-r border-slate-100 pr-4">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold mb-2">IF 用户特征</div>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs border border-blue-100 font-bold">BMI > 28 (大体重)</span>
+                            </div>
+                        </div>
+                        <div class="col-span-5 pl-2">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold mb-2">THEN 推荐方案</div>
+                            <div class="flex items-center gap-2 text-xs bg-green-50 p-1.5 rounded border border-green-100 w-fit">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                <span class="font-bold text-slate-700">A: 强支撑弹簧床垫</span>
+                                <span class="text-slate-400 font-mono">[100]</span>
+                            </div>
+                        </div>
+                        <div class="col-span-2 text-right opacity-0 group-hover:opacity-100 transition space-x-2">
+                            <button onclick="app.openDrawer()" class="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded hover:bg-blue-100">编辑</button>
+                            <button class="text-red-400 font-bold text-xs bg-red-50 px-2 py-1 rounded hover:bg-red-100">删除</button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+    </main>
+
+    <div id="drawer-backdrop" onclick="app.closeDrawer()" class="drawer-backdrop fixed inset-0"></div>
+    
+    <!-- 规则配置抽屉 -->
+    <aside id="drawer-rule" class="drawer fixed top-0 right-0 h-full w-[900px] bg-white flex shadow-2xl">
+        <div class="w-[65%] flex flex-col border-r border-slate-200">
+            <div class="h-16 border-b border-slate-100 flex justify-between items-center px-6 bg-slate-50">
+                <h3 class="font-bold text-slate-800 text-lg">配置规则 #1</h3>
+                <button onclick="app.closeDrawer()" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center transition"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50/50">
+                
+                <section>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded">IF</span>
+                        <h4 class="font-bold text-slate-700 text-sm">当用户满足以下特征</h4>
+                    </div>
+                    
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-sm">
+                        <div class="flex flex-wrap gap-2" id="tag-container">
+                            <div class="bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                                <span>[原始] 颈椎评分 > 30</span>
+                                <button onclick="this.parentElement.remove()" class="text-blue-300 hover:text-red-500"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="bg-purple-50 border border-purple-100 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                                <span>[问卷] 侧睡习惯</span>
+                                <button onclick="this.parentElement.remove()" class="text-purple-300 hover:text-red-500"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        
+                        <div class="relative">
+                            <select class="input-std font-medium text-slate-600 cursor-pointer border-dashed" onchange="app.addTag(this)">
+                                <option value="">+ 添加用户特征 (全量数据源)</option>
+                                <optgroup label="📊 原始检测数据">
+                                    <option>BMI > 24</option>
+                                    <option>体脂率 > 20%</option>
+                                </optgroup>
+                                <optgroup label="📝 问卷标签">
+                                    <option>侧睡习惯</option>
+                                    <option>入睡困难</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded">THEN</span>
+                            <h4 class="font-bold text-slate-700 text-sm">推荐方案组 (先匹配系列 -> 再匹配属性)</h4>
+                        </div>
+                        <button onclick="app.addOutcome()" class="text-xs text-blue-600 font-bold hover:bg-blue-50 px-2 py-1 rounded transition border border-transparent hover:border-blue-100">
+                            <i class="fas fa-plus"></i> 添加备选方案
+                        </button>
+                    </div>
+
+                    <div class="space-y-6" id="outcome-list">
+                        
+                        <div class="outcome-card ring-2 ring-green-500/20">
+                            <div class="outcome-header">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">方案 A (首选)</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <!-- 模式切换 -->
+                                    <div class="flex bg-slate-200 rounded p-0.5">
+                                        <button onclick="app.toggleMode(this, 'product')" class="px-2 py-0.5 rounded text-[10px] font-bold bg-white shadow-sm text-slate-700 mode-btn active">商品模式</button>
+                                        <button onclick="app.toggleMode(this, 'param')" class="px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 hover:text-slate-700 mode-btn">参数模式</button>
+                                    </div>
+                                    <div class="h-4 w-px bg-slate-300 mx-1"></div>
+                                    <div class="flex bg-slate-100 rounded-lg p-0.5">
+                                        <button class="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-green-600 shadow-sm border border-slate-200">强力</button>
+                                        <button class="px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 hover:text-slate-600">一般</button>
+                                        <button class="px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 hover:text-slate-600">弱</button>
+                                    </div>
+                                    <button class="btn-ghost text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                            
+                            <div class="outcome-body">
+                                <!-- 商品模式内容 -->
+                                <div class="mode-content mode-product">
+                                    <div>
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 flex justify-between">
+                                            <span>Step 1: 锁定产品系列 (Series)</span>
+                                            <span class="text-red-400">*必选</span>
+                                        </label>
+                                        <select class="input-std font-bold text-slate-700 bg-slate-50 border-slate-200">
+                                            <option value="s1" selected>深睡护脊枕系列</option>
+                                            <option value="s2">舒缓记忆棉枕系列</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="funnel-connector">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 flex justify-between">
+                                            <span>Step 2: 限定 SKU 属性</span>
+                                            <span class="text-slate-400 font-normal normal-case">可选</span>
+                                        </label>
+                                        
+                                        <div class="space-y-2">
+                                            <div class="attr-row">
+                                                <span class="text-xs text-slate-400 w-4 text-center"><i class="fas fa-filter"></i></span>
+                                                <select class="w-24 text-xs font-bold text-slate-600 bg-transparent outline-none cursor-pointer hover:text-blue-600"><option>材质 (基础)</option></select>
+                                                <span class="text-slate-300">=</span>
+                                                <select class="flex-1 text-xs font-bold text-blue-600 bg-transparent outline-none cursor-pointer"><option>硬支撑 (高回弹)</option></select>
+                                                <button class="text-slate-300 hover:text-red-500 px-2"><i class="fas fa-times"></i></button>
+                                            </div>
+                                            <button class="text-[10px] text-blue-500 font-bold hover:underline flex items-center gap-1 mt-2">
+                                                <i class="fas fa-plus-circle"></i> 增加筛选条件
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="funnel-connector">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Step 3: 推荐数量</label>
+                                        <select class="input-std text-xs font-bold text-slate-600 bg-white border-slate-200 w-40">
+                                            <option selected>跟随全局 Top N</option>
+                                            <option>仅推荐 1 个</option>
+                                            <option>仅推荐 2 个</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- 参数模式内容 -->
+                                <div class="mode-content mode-param hidden">
+                                    <div class="bg-indigo-50 border border-indigo-100 rounded p-3">
+                                        <label class="text-[10px] font-bold text-indigo-400 uppercase mb-2 block">通用参数建议 <span class="font-normal text-indigo-300 normal-case">(自动读取 [商品中心] 属性模板)</span></label>
+                                        <div class="space-y-2">
+                                            <div class="flex items-center gap-2">
+                                                <select class="w-24 text-xs font-bold text-slate-600 bg-white border border-indigo-200 rounded px-2 py-1 outline-none">
+                                                    <option>建议高度</option>
+                                                    <option>建议硬度</option>
+                                                    <option>建议材质</option>
+                                                </select>
+                                                <span class="text-indigo-300">=</span>
+                                                <input type="text" value="12cm - 14cm" class="flex-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 rounded px-2 py-1" placeholder="建议值">
+                                                <button class="text-indigo-300 hover:text-red-500 px-1"><i class="fas fa-times"></i></button>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <select class="w-24 text-xs font-bold text-slate-600 bg-white border border-indigo-200 rounded px-2 py-1 outline-none">
+                                                    <option selected>建议硬度</option>
+                                                    <option>建议高度</option>
+                                                    <option>建议材质</option>
+                                                </select>
+                                                <span class="text-indigo-300">=</span>
+                                                <input type="text" value="偏硬" class="flex-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 rounded px-2 py-1" placeholder="建议值">
+                                                <button class="text-indigo-300 hover:text-red-500 px-1"><i class="fas fa-times"></i></button>
+                                            </div>
+                                            <button class="text-[10px] text-indigo-500 font-bold hover:underline flex items-center gap-1 mt-2">
+                                                <i class="fas fa-plus-circle"></i> 增加参数
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="outcome-card opacity-90 hover:opacity-100">
+                            <div class="outcome-header">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">方案 B (备选)</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="flex bg-slate-100 rounded-lg p-0.5">
+                                        <button class="px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 hover:text-slate-600">强力</button>
+                                        <button class="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-yellow-600 shadow-sm border border-slate-200">一般</button>
+                                        <button class="px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 hover:text-slate-600">弱</button>
+                                    </div>
+                                    <button class="btn-ghost text-red-400" onclick="this.closest('.outcome-card').remove()"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                            
+                            <div class="outcome-body">
+                                <!-- 商品模式 -->
+                                <div class="mode-content mode-product">
+                                    <div>
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Step 1: 锁定产品系列</label>
+                                        <select class="input-std font-bold text-slate-700 bg-slate-50 border-slate-200">
+                                            <option value="s2" selected>舒缓记忆棉枕系列</option>
+                                            <option value="s1">深睡护脊枕系列</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="funnel-connector opacity-60">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Step 2: 限定 SKU 属性</label>
+                                        <div class="text-xs text-slate-400 italic pl-2 border-l-2 border-slate-100">
+                                            未配置条件 (默认推荐该系列下所有商品)
+                                        </div>
+                                        <button class="text-[10px] text-blue-500 font-bold hover:underline flex items-center gap-1 mt-2">
+                                            <i class="fas fa-plus-circle"></i> 增加筛选条件
+                                        </button>
+                                    </div>
+
+                                    <div class="funnel-connector">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Step 3: 推荐数量</label>
+                                        <select class="input-std text-xs font-bold text-slate-600 bg-white border-slate-200 w-40">
+                                            <option selected>跟随全局 Top N</option>
+                                            <option>仅推荐 1 个</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- 参数模式 -->
+                                <div class="mode-content mode-param hidden">
+                                    <div class="bg-indigo-50 border border-indigo-100 rounded p-3 text-center">
+                                        <p class="text-xs text-indigo-400 mb-2">未配置参数建议 <span class="font-normal text-indigo-300 normal-case block mt-1">(将读取 [商品中心] 属性模板)</span></p>
+                                        <button class="text-[10px] text-indigo-500 font-bold hover:underline">
+                                            <i class="fas fa-plus-circle"></i> 添加参数
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <section class="border-t border-slate-200 pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded">SAY</span>
+                            <h4 class="font-bold text-slate-700 text-sm">推荐话术 (富文本)</h4>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="text-[10px] bg-slate-100 px-2 py-1 rounded hover:bg-slate-200 text-slate-600">引用模板: 风险干预</button>
+                        </div>
+                    </div>
+                    <div class="border border-slate-300 rounded-lg overflow-hidden bg-white">
+                        <!-- Toolbar Mock -->
+                        <div class="bg-slate-50 border-b border-slate-200 px-2 py-1.5 flex gap-2">
+                            <button class="w-6 h-6 rounded hover:bg-slate-200 text-slate-600 text-xs font-bold">B</button>
+                            <button class="w-6 h-6 rounded hover:bg-slate-200 text-slate-600 text-xs italic font-serif">I</button>
+                            <button class="w-6 h-6 rounded hover:bg-slate-200 text-slate-600 text-xs underline">U</button>
+                            <div class="w-px h-4 bg-slate-300 my-auto"></div>
+                            <button class="h-6 px-2 rounded hover:bg-slate-200 text-slate-600 text-xs flex items-center gap-1">
+                                <i class="fas fa-list-ul"></i>
+                            </button>
+                            <button class="h-6 px-2 rounded hover:bg-slate-200 text-slate-600 text-xs flex items-center gap-1">
+                                <i class="fas fa-image"></i> 图片
+                            </button>
+                        </div>
+                        <!-- Content Area -->
+                        <div class="p-3 text-sm text-slate-700 min-h-[80px] outline-none" contenteditable="true">
+                            <p>检测到您有<strong>【颈椎风险】</strong>，且习惯<strong>【侧睡】</strong>。</p>
+                            <p class="mt-2">首选推荐<span class="text-blue-600 font-bold">【硬支撑高枕】</span>以辅助颈椎复位；若您更偏好包裹感，也可尝试【适中记忆棉枕】。</p>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+            
+            <div class="p-6 border-t border-slate-100 bg-white flex justify-end gap-3">
+                <button onclick="app.closeDrawer()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition">取消</button>
+                <button onclick="app.closeDrawer()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">保存规则</button>
+            </div>
+        </div>
+
+        <div class="flex-1 bg-slate-100 p-8 flex flex-col items-center justify-center border-l border-slate-200 relative">
+            <div class="absolute top-6 left-6">
+                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Preview</h4>
+                <p class="text-xs text-slate-500">模拟 H5 最终展示效果</p>
+            </div>
+            
+            <div class="w-[280px] bg-white rounded-[30px] border-[8px] border-slate-800 shadow-2xl overflow-hidden h-[560px] relative">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-slate-800 rounded-b-lg z-20"></div>
+                
+                <div class="h-full overflow-y-auto bg-slate-50 pt-10 px-3 pb-4">
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-lg mb-4 text-xs leading-relaxed relative">
+                        <div class="absolute -top-2 left-0 w-2 h-2 bg-blue-600"></div> 检测到您有<strong>【颈椎风险】</strong>...建议首选<strong>【硬支撑】</strong>材质...
+                    </div>
+
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <span class="text-xs font-bold text-slate-800">为您精选</span>
+                        <span class="text-[10px] text-slate-400">综合匹配分排序</span>
+                    </div>
+
+                    <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex gap-2 mb-2 relative overflow-hidden group hover:border-green-400 transition cursor-pointer">
+                        <div class="absolute top-0 right-0 bg-green-500 text-white text-[8px] px-1.5 py-0.5 rounded-bl font-bold">100分</div>
+                        <div class="w-14 h-14 bg-slate-100 rounded flex-shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-bold text-slate-700 truncate">深睡护脊枕 (硬/高)</div>
+                            <div class="flex gap-1 mt-1">
+                                <span class="text-[8px] bg-green-50 text-green-700 px-1 rounded border border-green-100">完美匹配</span>
+                            </div>
+                            <div class="text-xs font-bold text-red-500 mt-1">¥ 399</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex gap-2 opacity-80 group hover:border-yellow-400 transition cursor-pointer">
+                        <div class="absolute top-0 right-0 bg-yellow-500 text-white text-[8px] px-1.5 py-0.5 rounded-bl font-bold">70分</div>
+                        <div class="w-14 h-14 bg-slate-100 rounded flex-shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-bold text-slate-600 truncate">舒缓记忆棉枕 (中)</div>
+                            <div class="flex gap-1 mt-1">
+                                <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">备选方案</span>
+                            </div>
+                            <div class="text-xs font-bold text-red-500 mt-1">¥ 299</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="modal-create" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="app.closeModal('modal-create')"></div>
+        <div class="bg-white w-[600px] rounded-xl shadow-2xl p-8 relative z-10 fade-in">
+            <h3 class="text-lg font-bold text-slate-800 mb-6">新建策略包</h3>
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">策略名称 <span class="text-red-500">*</span></label>
+                    <input type="text" class="input-std" placeholder="例如：2025春节大促枕头策略">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">策略描述</label>
+                    <textarea class="input-std h-16 resize-none" placeholder="选填，描述策略的用途和目标人群"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">关联品类 <span class="text-red-500">*</span></label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="border-2 border-blue-500 bg-blue-50 rounded-lg p-3 cursor-pointer text-center transition">
+                            <input type="radio" name="cat" checked class="hidden">
+                            <div class="font-bold text-blue-700">枕头</div>
+                        </label>
+                        <label class="border border-slate-200 rounded-lg p-3 cursor-pointer text-center hover:border-slate-300 transition">
+                            <input type="radio" name="cat" class="hidden">
+                            <div class="font-bold text-slate-600">床垫</div>
+                        </label>
+                        <label class="border border-slate-200 rounded-lg p-3 cursor-pointer text-center hover:border-slate-300 transition">
+                            <input type="radio" name="cat" class="hidden">
+                            <div class="font-bold text-slate-600">工学椅</div>
+                        </label>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2 flex items-center gap-1"><i class="fas fa-info-circle"></i> 创建后品类不可修改，因为规则配置依赖品类属性。</p>
+                </div>
+            </div>
+            <div class="mt-8 flex justify-end gap-3">
+                <button onclick="app.closeModal('modal-create')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition">取消</button>
+                <button onclick="app.closeModal('modal-create'); app.toDetail()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">创建策略</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 熔断规则编辑弹窗 -->
+    <div id="modal-fuse" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="app.closeModal('modal-fuse')"></div>
+        <div class="bg-white w-[500px] rounded-xl shadow-2xl p-6 relative z-10 fade-in">
+            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span class="w-6 h-6 rounded bg-red-100 text-red-600 flex items-center justify-center text-xs"><i class="fas fa-shield-alt"></i></span>
+                添加熔断规则
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">触发条件（用户标签）</label>
+                    <p class="text-xs text-slate-500 mb-2">当用户有以下任一标签时，触发此规则</p>
+                    <select class="input-std" multiple style="height: 80px;">
+                        <option selected>乳胶过敏</option>
+                        <option>孕妇</option>
+                        <option>儿童（<12岁）</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">排除属性（推荐匹配属性）</label>
+                    <p class="text-xs text-slate-500 mb-2">排除具有以下属性的商品</p>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <select class="input-std flex-1">
+                                <option>材质</option>
+                                <option>高度</option>
+                                <option>软硬度</option>
+                            </select>
+                            <span class="text-slate-400">=</span>
+                            <select class="input-std flex-1">
+                                <option>天然乳胶</option>
+                                <option>合成乳胶</option>
+                            </select>
+                            <button class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                    <button class="text-xs text-blue-600 mt-2 hover:underline">+ 添加排除条件</button>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="app.closeModal('modal-fuse')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50">取消</button>
+                <button onclick="app.closeModal('modal-fuse')" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">保存规则</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模拟测试弹窗 -->
+    <div id="modal-simulate" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="app.closeModal('modal-simulate')"></div>
+        <div class="bg-white w-[1000px] h-[700px] rounded-xl shadow-2xl relative z-10 fade-in flex overflow-hidden">
+            
+            <!-- 侧边栏导航 -->
+            <div class="w-48 bg-slate-50 border-r border-slate-200 flex flex-col">
+                <div class="p-4 border-b border-slate-200">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-flask text-indigo-600"></i> 测试中心
+                    </h3>
+                </div>
+                <div class="p-2 space-y-1">
+                    <button onclick="app.switchSimMode('manual')" id="btn-sim-manual" class="w-full text-left px-3 py-2 rounded-lg text-sm font-bold bg-indigo-50 text-indigo-700">手动模拟</button>
+                    <button onclick="app.switchSimMode('report')" id="btn-sim-report" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">单报告验证</button>
+                    <button onclick="app.switchSimMode('batch')" id="btn-sim-batch" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">批量/预设回测</button>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="flex-1 flex flex-col min-w-0">
+                <div class="h-14 border-b border-slate-200 flex justify-between items-center px-6 bg-white">
+                    <h4 class="font-bold text-slate-700" id="sim-title">手动构建用户画像</h4>
+                    <button onclick="app.closeModal('modal-simulate')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <!-- 模式内容容器 -->
+                <div class="flex-1 overflow-hidden relative">
+                    
+                    <!-- 1. 手动模拟 (Manual) -->
+                    <div id="sim-view-manual" class="absolute inset-0 flex">
+                        <!-- 输入区 -->
+                        <div class="w-1/2 p-6 overflow-y-auto border-r border-slate-200">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-700 mb-2">模拟用户标签</label>
+                                    <div class="flex flex-wrap gap-2 mb-2" id="sim-tags">
+                                        <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                            颈椎评分 > 30 <button class="text-blue-300 hover:text-red-500" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </span>
+                                        <span class="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                            侧睡习惯 <button class="text-purple-300 hover:text-red-500" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </span>
+                                    </div>
+                                    <select class="input-std text-sm" onchange="app.addSimTag(this)">
+                                        <option value="">+ 添加标签...</option>
+                                        <option>BMI偏高</option>
+                                        <option>乳胶过敏</option>
+                                        <option>入睡困难</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-700 mb-2">选择门店</label>
+                                    <select class="input-std text-sm">
+                                        <option>北京朝阳店</option>
+                                        <option>上海静安店</option>
+                                    </select>
+                                </div>
+                                <button onclick="app.runSimulation()" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition shadow-sm">
+                                    <i class="fas fa-play mr-2"></i>运行测试
+                                </button>
+                                <div class="border-t border-slate-200 pt-4">
+                                    <h4 class="text-sm font-bold text-slate-700 mb-2">匹配日志</h4>
+                                    <div class="bg-slate-900 rounded-lg p-3 text-xs font-mono text-green-400 h-40 overflow-y-auto" id="sim-log">
+                                        <div class="text-slate-500"># 等待运行...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 结果区 -->
+                        <div class="w-1/2 bg-slate-100 flex items-center justify-center p-6">
+                            <div class="w-[280px] bg-white rounded-[30px] border-[8px] border-slate-800 shadow-xl overflow-hidden h-[480px] relative">
+                                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-slate-800 rounded-b-lg z-20"></div>
+                                <div class="h-full overflow-y-auto bg-slate-50 pt-10 px-3 pb-4" id="sim-preview">
+                                    <div class="text-center text-slate-400 text-sm py-20">
+                                        <i class="fas fa-mobile-alt text-4xl mb-3 block opacity-50"></i>
+                                        运行后预览效果
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 单报告验证 (Report) -->
+                    <div id="sim-view-report" class="absolute inset-0 flex hidden">
+                        <div class="w-full p-6 space-y-4">
+                            <div class="bg-white border border-slate-200 rounded-lg p-4">
+                                <label class="block text-sm font-bold text-slate-700 mb-2">选择历史报告</label>
+                                <div class="flex gap-2">
+                                    <input type="text" class="input-std flex-1" placeholder="输入手机号或报告ID搜索...">
+                                    <button class="bg-slate-100 text-slate-600 px-4 rounded-lg font-bold hover:bg-slate-200">搜索</button>
+                                </div>
+                                <div class="mt-4 border rounded-lg overflow-hidden text-sm">
+                                    <table class="w-full text-left">
+                                        <thead class="bg-slate-50 text-slate-500 font-bold border-b">
+                                            <tr>
+                                                <th class="p-3">用户</th>
+                                                <th class="p-3">检测时间</th>
+                                                <th class="p-3">关键标签</th>
+                                                <th class="p-3 text-right">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y">
+                                            <tr class="hover:bg-blue-50 cursor-pointer">
+                                                <td class="p-3">张三 (138****0000)</td>
+                                                <td class="p-3 text-slate-500">2026-01-20 14:30</td>
+                                                <td class="p-3"><span class="bg-red-50 text-red-600 px-1 rounded text-xs">颈椎风险</span></td>
+                                                <td class="p-3 text-right"><button class="text-blue-600 font-bold hover:underline">载入</button></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. 批量回测 (Batch) -->
+                    <div id="sim-view-batch" class="absolute inset-0 flex hidden">
+                        <div class="w-full p-6">
+                            <div class="grid grid-cols-2 gap-6 mb-6">
+                                <div class="bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-400 cursor-pointer transition ring-2 ring-transparent hover:ring-blue-100">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fas fa-history"></i></div>
+                                        <h4 class="font-bold text-slate-700">历史数据回测</h4>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mb-3">使用过去30天的真实用户数据运行当前策略，验证覆盖率。</p>
+                                    <button class="w-full py-1.5 bg-slate-100 text-slate-600 rounded text-xs font-bold hover:bg-slate-200">选择数据范围</button>
+                                </div>
+                                <div class="bg-white border border-slate-200 rounded-xl p-4 hover:border-purple-400 cursor-pointer transition ring-2 ring-transparent hover:ring-purple-100">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center"><i class="fas fa-vial"></i></div>
+                                        <h4 class="font-bold text-slate-700">标准用例验证</h4>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mb-3">使用系统预设的 500 个典型/边缘用户案例，验证策略分布逻辑。</p>
+                                    <button class="w-full py-1.5 bg-slate-100 text-slate-600 rounded text-xs font-bold hover:bg-slate-200">开始验证</button>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center">
+                                <div class="text-slate-400 mb-2"><i class="fas fa-chart-pie text-4xl"></i></div>
+                                <p class="text-sm text-slate-500">点击上方按钮开始批量测试，结果将在此处展示分布图表</p>
+                            </div>
+                        </div>
+                    </div>
+                
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发布校验弹窗 -->
+    <div id="modal-publish" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="app.closeModal('modal-publish')"></div>
+        <div class="bg-white w-[500px] rounded-xl shadow-2xl relative z-10 fade-in overflow-hidden">
+            <div class="p-4 border-b border-green-100 bg-green-50 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                    <i class="fas fa-check-circle text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-green-800">校验通过</h3>
+                    <p class="text-xs text-green-600">策略配置完整，可以发布</p>
+                </div>
+            </div>
+            <div class="p-4">
+                <p class="text-sm text-slate-600">确认发布后，策略将立即生效。</p>
+            </div>
+            <div class="p-4 bg-slate-50 border-t flex justify-end gap-3">
+                <button onclick="app.closeModal('modal-publish')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-white">取消</button>
+                <button onclick="app.closeModal('modal-publish'); app.toList()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700">
+                    <i class="fas fa-rocket mr-1"></i>确认发布
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除策略包弹窗 -->
+    <div id="modal-delete" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="app.closeModal('modal-delete')"></div>
+        <div class="bg-white w-[420px] rounded-xl shadow-2xl relative z-10 fade-in overflow-hidden">
+            <div class="p-4 border-b border-red-100 bg-red-50 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                    <i class="fas fa-trash text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-red-700">确认删除</h3>
+                    <p class="text-xs text-red-600">删除后不可恢复</p>
+                </div>
+            </div>
+            <div class="p-4">
+                <p class="text-sm text-slate-600">确定删除策略包“2025 门店通用枕头策略”？</p>
+            </div>
+            <div class="p-4 bg-slate-50 border-t flex justify-end gap-3">
+                <button onclick="app.closeModal('modal-delete')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-white">取消</button>
+                <button onclick="app.closeModal('modal-delete')" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            nav: function(page) {
+                document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+                document.getElementById('view-' + page).classList.remove('hidden');
+                
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    el.classList.remove('active', 'bg-slate-800', 'text-white', 'border-blue-500');
+                    el.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white', 'border-transparent');
+                });
+                
+                const activeNav = document.getElementById('nav-' + page);
+                if(activeNav) {
+                    activeNav.classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white', 'border-transparent');
+                    activeNav.classList.add('active', 'bg-slate-800', 'text-white', 'border-blue-500');
+                }
+            },
+            
+            toDetail: function() {
+                document.getElementById('view-list').classList.add('hidden');
+                document.getElementById('view-detail').classList.remove('hidden');
+            },
+            toList: function() {
+                document.getElementById('view-detail').classList.add('hidden');
+                document.getElementById('view-list').classList.remove('hidden');
+            },
+
+            openModal: function(id) { document.getElementById(id).classList.remove('hidden'); },
+            closeModal: function(id) { document.getElementById(id).classList.add('hidden'); },
+
+            openDrawer: function() {
+                document.getElementById('drawer-backdrop').classList.remove('hidden');
+                setTimeout(() => document.getElementById('drawer-rule').classList.add('open'), 10);
+            },
+            closeDrawer: function() {
+                document.getElementById('drawer-rule').classList.remove('open');
+                setTimeout(() => document.getElementById('drawer-backdrop').classList.add('hidden'), 300);
+            },
+            
+            addTag: function(select) {
+                if(!select.value) return;
+                const text = select.options[select.selectedIndex].text;
+                const container = document.getElementById('tag-container');
+                const div = document.createElement('div');
+                div.className = 'bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2';
+                div.innerHTML = `<span>${text}</span><button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-red-500"><i class="fas fa-times"></i></button>`;
+                container.appendChild(div);
+                select.value = '';
+            },
+            addOutcome: function() {
+                const list = document.getElementById('outcome-list');
+                const newCard = list.children[1].cloneNode(true); 
+                newCard.querySelector('.outcome-header span').innerText = '方案 C (补充)';
+                newCard.querySelector('.outcome-header span').className = 'text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded';
+                list.appendChild(newCard);
+            },
+            
+            // 模式切换 (商品/参数)
+            toggleMode: function(btn, mode) {
+                const card = btn.closest('.outcome-card');
+                
+                // 按钮样式切换
+                card.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-white', 'shadow-sm', 'text-slate-700');
+                    b.classList.add('text-slate-500', 'hover:text-slate-700');
+                });
+                btn.classList.add('active', 'bg-white', 'shadow-sm', 'text-slate-700');
+                btn.classList.remove('text-slate-500', 'hover:text-slate-700');
+
+                // 内容切换
+                card.querySelectorAll('.mode-content').forEach(el => el.classList.add('hidden'));
+                card.querySelector('.mode-' + mode).classList.remove('hidden');
+            },
+
+            // 模拟测试模式切换
+            switchSimMode: function(mode) {
+                // 按钮状态
+                ['manual', 'report', 'batch'].forEach(m => {
+                    const btn = document.getElementById('btn-sim-' + m);
+                    if (m === mode) {
+                        btn.className = 'w-full text-left px-3 py-2 rounded-lg text-sm font-bold bg-indigo-50 text-indigo-700';
+                    } else {
+                        btn.className = 'w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100';
+                    }
+                });
+
+                // 视图显示
+                ['manual', 'report', 'batch'].forEach(m => {
+                    const el = document.getElementById('sim-view-' + m);
+                    if (m === mode) {
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                });
+
+                // 标题更新
+                const titles = {
+                    'manual': '手动构建用户画像',
+                    'report': '单报告验证 (真实数据)',
+                    'batch': '批量回测 / 预设用例'
+                };
+                document.getElementById('sim-title').innerText = titles[mode];
+            },
+            
+            
+            // 模拟测试 - 添加标签
+            addSimTag: function(select) {
+                if(!select.value) return;
+                const text = select.options[select.selectedIndex].text;
+                const container = document.getElementById('sim-tags');
+                const span = document.createElement('span');
+                span.className = 'bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1';
+                span.innerHTML = `${text} <button class="text-green-300 hover:text-red-500" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+                container.appendChild(span);
+                select.value = '';
+            },
+            
+            // 运行模拟测试
+            runSimulation: function() {
+                const log = document.getElementById('sim-log');
+                const preview = document.getElementById('sim-preview');
+                
+                // 模拟日志输出
+                log.innerHTML = `
+                    <div class="text-cyan-400">[INFO] 开始执行推荐计算...</div>
+                    <div class="text-slate-500 mt-1">━━━ 第一步: 熔断过滤 ━━━</div>
+                    <div class="text-green-400">✓ 未命中熔断规则，继续执行</div>
+                    <div class="text-slate-500 mt-2">━━━ 第二步: 正向匹配 ━━━</div>
+                    <div class="text-yellow-400">→ 检查规则 #1: 颈椎评分>30 AND 侧睡习惯</div>
+                    <div class="text-green-400">  ✓ 命中! 权重分: 100</div>
+                    <div class="text-yellow-400">→ 检查规则 #2: BMI>28</div>
+                    <div class="text-red-400">  ✗ 未命中 (缺少标签: BMI>28)</div>
+                    <div class="text-slate-500 mt-2">━━━ 第三步: 加权算分 ━━━</div>
+                    <div class="text-white">SKU: 深睡护脊枕（硬/高）</div>
+                    <div class="text-slate-400">  基础分: 80 × 30% = 24</div>
+                    <div class="text-slate-400">  匹配分: 100 × 50% = 50</div>
+                    <div class="text-slate-400">  运营分: 0 × 20% = 0</div>
+                    <div class="text-green-400 font-bold">  总分: 74</div>
+                    <div class="text-slate-500 mt-2">━━━ 第四步: 截断输出 ━━━</div>
+                    <div class="text-cyan-400">[RESULT] 返回 Top 3 商品</div>
+                `;
+                
+                // 模拟预览结果
+                preview.innerHTML = `
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-lg mb-4 text-xs leading-relaxed relative">
+                        <div class="absolute -top-2 left-0 w-2 h-2 bg-blue-600"></div>
+                        检测到您有<strong>【颈椎风险】</strong>，且习惯<strong>【侧睡】</strong>。建议首选<strong>【硬支撑高枕】</strong>以辅助颈椎复位...
+                    </div>
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <span class="text-xs font-bold text-slate-800">为您精选</span>
+                        <span class="text-[10px] text-slate-400">综合匹配分排序</span>
+                    </div>
+                    <div class="bg-white p-2 rounded-lg border border-green-300 shadow-sm flex gap-2 mb-2 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-green-500 text-white text-[8px] px-1.5 py-0.5 rounded-bl font-bold">74分</div>
+                        <div class="w-14 h-14 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center text-slate-300"><i class="fas fa-cube"></i></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-bold text-slate-700 truncate">深睡护脊枕 (硬/高)</div>
+                            <div class="flex gap-1 mt-1">
+                                <span class="text-[8px] bg-green-50 text-green-700 px-1 rounded border border-green-100">完美匹配</span>
+                            </div>
+                            <div class="text-xs font-bold text-red-500 mt-1">¥ 399</div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex gap-2 mb-2 opacity-80">
+                        <div class="absolute top-0 right-0 bg-yellow-500 text-white text-[8px] px-1.5 py-0.5 rounded-bl font-bold">68分</div>
+                        <div class="w-14 h-14 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center text-slate-300"><i class="fas fa-cube"></i></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-bold text-slate-600 truncate">舒缓记忆棉枕 (中)</div>
+                            <div class="flex gap-1 mt-1">
+                                <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">备选方案</span>
+                            </div>
+                            <div class="text-xs font-bold text-red-500 mt-1">¥ 299</div>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+        
+        // Init
+        app.nav('list');
+    </script>
+</body>
+</html>
