@@ -30,6 +30,16 @@
         /* 智能标签样式 */
         .smart-tag-input { background-image: linear-gradient(to right, #f5f3ff, #fff); transition: all 0.2s; }
         .smart-tag-input:focus { background-image: none; background-color: white; }
+        /* 标签手动修改后的状态 */
+        .smart-tag-input[data-modified="true"] { 
+            background-image: none; 
+            background-color: #f8fafc;
+            color: #475569;
+            border-bottom: 1px dashed #cbd5e1;
+        }
+        /* 锁图标样式 */
+        .tag-lock-icon { display: none; }
+        .smart-tag-input[data-modified="true"] ~ .tag-lock-icon { display: inline-block; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -80,7 +90,7 @@
                             <tr>
                                 <th class="px-5 py-3">问卷名称</th>
                                 <th class="px-5 py-3">状态</th>
-                                <th class="px-5 py-3">标签数</th>
+                                <th class="px-5 py-3">问卷标签数</th>
                                 <th class="px-5 py-3">更新时间</th>
                                 <th class="px-5 py-3 text-right">操作</th>
                             </tr>
@@ -374,9 +384,12 @@
             },
 
             goBack: function() {
-                if (this.currentStatus === 'draft' && document.getElementById('question-list').children.length > 0) {
-                     // 简单模拟离开确认
-                     // if(!confirm('是否保存草稿并退出？')) return;
+                if (this.currentStatus === 'draft') {
+                     // 简单检查是否有内容
+                     var list = document.getElementById('question-list');
+                     if (list.children.length > 0 && confirm('⚠️ 确定退出吗？\n\n未保存的内容可能会丢失。建议先点击"保存"。') === false) {
+                         return;
+                     }
                 }
                 document.getElementById('view-editor').classList.add('hidden');
                 document.getElementById('view-editor').classList.remove('flex');
@@ -466,7 +479,27 @@
 
             // === 题目核心逻辑 ===
             addQuestion: function(type) {
-                this.addQuestionToUI(type, '点击编辑题目...', false, []);
+                // 先打开抽屉，暂不在画布生成卡片
+                if (this.currentStatus !== 'draft') {
+                    alert('❌ 无法添加\n\n当前为只读状态。');
+                    return;
+                }
+                
+                // 重置抽屉状态为“新建模式”
+                this.currentCard = null; // null 表示新建
+                document.getElementById('drawer-type').textContent = type;
+                document.getElementById('drawer-title').value = '';
+                document.getElementById('drawer-required').checked = false;
+                
+                // 设置新建模式的临时数据
+                this.tempNewType = type;
+                
+                var list = document.getElementById('option-list');
+                list.innerHTML = '';
+                this.addOption('', '');
+                this.addOption('', '');
+                
+                this.showDrawer('drawer-edit');
             },
 
             addQuestionToUI: function(type, titleText, required, options) {
@@ -630,9 +663,10 @@
                     '<input type="text" value="' + textValue + '" class="opt-text flex-1 border-b border-transparent border-slate-100 focus:border-blue-500 outline-none text-sm font-bold py-1" placeholder="输入选项..." oninput="app.syncTagFromOption(this)">' +
                     '<button onclick="app.removeOption(this)" class="text-slate-300 hover:text-red-500 px-1"><i class="fas fa-times"></i></button>' +
                     '</div>' +
-                    '<div class="ml-7 flex items-center gap-2 bg-purple-50 rounded-md p-1.5 border border-purple-100">' +
+                    '<div class="ml-7 flex items-center gap-2 bg-purple-50 rounded-md p-1.5 border border-purple-100 relative group">' +
                     '<i class="fas fa-tag text-purple-400 text-xs"></i>' +
-                    '<input type="text" value="' + tagValue + '" class="opt-tag smart-tag-input flex-1 bg-transparent text-xs text-purple-600 outline-none font-medium" placeholder="标签自动生成" onfocus="this.dataset.modified=true">' +
+                    '<input type="text" value="' + tagValue + '" class="opt-tag smart-tag-input flex-1 bg-transparent text-xs text-purple-600 outline-none font-medium" placeholder="标签自动生成" oninput="app.markTagModified(this)">' +
+                    '<i class="fas fa-link-slash text-slate-400 text-[10px] tag-lock-icon" title="自动同步已断开"></i>' +
                     '</div>';
                 list.appendChild(div);
             },
@@ -641,9 +675,17 @@
                 var optionItem = input.closest('.option-item');
                 var tagInput = optionItem.querySelector('.opt-tag');
                 // 只有当用户没有手动修改过标签时，才自动同步
-                if (!tagInput.dataset.modified) {
-                    tagInput.value = input.value;
+                if (tagInput.dataset.modified !== "true") {
+                    var val = input.value;
+                    // 简单的长度截断，实际应有更友好的提示
+                    if(val.length > 15) val = val.substring(0, 15);
+                    tagInput.value = val;
                 }
+            },
+
+            markTagModified: function(input) {
+                // 标记为已手动修改，断开同步
+                input.dataset.modified = "true";
             },
 
             removeOption: function(btn) {
@@ -656,9 +698,31 @@
             },
 
             saveQuestion: function() {
-                if (!this.currentCard) return;
                 var title = document.getElementById('drawer-title').value.trim() || '未命名题目';
                 var required = document.getElementById('drawer-required').checked;
+                var list = document.getElementById('option-list');
+                
+                // 如果是新建模式 (currentCard 为 null)
+                if (!this.currentCard) {
+                    // 调用 addQuestionToUI 真正创建卡片
+                    // 构建 options 数组
+                    var optionsData = [];
+                    var optionItems = list.querySelectorAll('.option-item');
+                    optionItems.forEach(function(item) {
+                        optionsData.push({
+                            text: item.querySelector('.opt-text').value,
+                            tag: item.querySelector('.opt-tag').value
+                        });
+                    });
+                    
+                    this.addQuestionToUI(this.tempNewType, title, required, optionsData);
+                    
+                    // 获取刚创建的卡片（最后一个）并设为 currentCard，以便后续逻辑统一（虽然马上要关闭了）
+                    var allCards = document.querySelectorAll('#question-list .q-card');
+                    this.currentCard = allCards[allCards.length - 1];
+                }
+
+                // 常规保存逻辑 (更新 currentCard)
                 var type = this.currentCard.getAttribute('data-type') || '单选题';
                 var isMulti = type === '多选题';
                 var typeClass = isMulti ? 'bg-green-100 text-green-600 border-green-200' : 'bg-blue-100 text-blue-600 border-blue-200';

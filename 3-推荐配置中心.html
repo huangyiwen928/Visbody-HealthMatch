@@ -174,16 +174,30 @@
         /* 动画 */
         .fade-in { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        
+        /* Toast 提示 */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease-out; font-size: 14px; font-weight: 600; min-width: 300px; border-left: 4px solid transparent; }
+        .toast-success { border-left-color: #22c55e; }
+        .toast-error { border-left-color: #ef4444; }
+        
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        /* 筛选 Tab */
+        .filter-tab.active { background-color: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
+    <!-- 全局 Toast 容器 -->
+    <div id="toast-container"></div>
 
 <div class="layout-container">
     
     <aside class="w-64 bg-slate-900 flex-shrink-0 flex flex-col z-50">
         <div class="h-16 flex items-center px-6 font-bold text-white border-b border-slate-800 text-lg gap-2">
             <div class="w-7 h-7 bg-blue-600 rounded flex items-center justify-center text-xs shadow-lg"><i class="fas fa-cube"></i></div>
-            配置中心
+            推荐策略中心
         </div>
         <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
             <div class="px-6 text-[10px] font-bold text-slate-600 uppercase mb-2 tracking-wider">推荐策略中心</div>
@@ -201,7 +215,16 @@
         <!-- 视图: 策略列表 -->
         <div id="view-list" class="absolute inset-0 flex flex-col h-full z-10">
             <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0">
-                <h1 class="text-xl font-bold text-slate-800">策略包管理</h1>
+                <div class="flex items-center gap-6">
+                    <h1 class="text-xl font-bold text-slate-800">策略包管理</h1>
+                    <!-- 状态筛选 Tab -->
+                    <div class="bg-slate-100 p-1 rounded-lg flex text-sm font-bold text-slate-500">
+                        <button class="filter-tab active px-3 py-1.5 rounded-md transition" onclick="app.filter(this, 'all')">全部</button>
+                        <button class="filter-tab px-3 py-1.5 rounded-md transition hover:text-slate-700" onclick="app.filter(this, 'online')">生效中</button>
+                        <button class="filter-tab px-3 py-1.5 rounded-md transition hover:text-slate-700" onclick="app.filter(this, 'draft')">草稿</button>
+                        <button class="filter-tab px-3 py-1.5 rounded-md transition hover:text-slate-700" onclick="app.filter(this, 'history')">历史版本</button>
+                    </div>
+                </div>
                 <div class="flex gap-3">
                     <div class="relative">
                         <input type="text" placeholder="搜索策略名称..." class="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:border-blue-500 outline-none transition bg-white shadow-sm">
@@ -341,12 +364,12 @@
                     </div>
                 </section>
 
-                <!-- 禁忌规则区域 -->
+                <!-- 熔断规则区域 -->
                 <section class="bg-white border border-red-100 rounded-xl shadow-sm overflow-hidden">
                     <div class="bg-red-50/50 px-4 py-3 border-b border-red-100 flex justify-between items-center">
                         <div class="flex items-center gap-2">
                             <div class="w-6 h-6 rounded bg-red-100 text-red-600 flex items-center justify-center text-xs"><i class="fas fa-shield-alt"></i></div>
-                            <h3 class="text-sm font-bold text-red-800">熔断禁忌规则 (Fuse Rules)</h3>
+                            <h3 class="text-sm font-bold text-red-800">熔断规则 (Fuse Rules)</h3>
                         </div>
                         <button onclick="app.openModal('modal-fuse')" class="text-xs text-red-600 hover:bg-red-100 px-3 py-1.5 rounded transition border border-red-200 font-bold flex items-center gap-1">
                             <i class="fas fa-plus"></i> 添加禁忌
@@ -465,7 +488,7 @@
                         <div class="relative">
                             <select class="input-std font-medium text-slate-600 cursor-pointer border-dashed" onchange="app.addTag(this)">
                                 <option value="">+ 添加用户特征 (全量数据源)</option>
-                                <optgroup label="📊 原始检测数据">
+                                <optgroup label="📊 原始指标">
                                     <option>BMI > 24</option>
                                     <option>体脂率 > 20%</option>
                                 </optgroup>
@@ -522,8 +545,8 @@
                                             <span class="text-red-400">*必选</span>
                                         </label>
                                         <select class="input-std font-bold text-slate-700 bg-slate-50 border-slate-200">
-                                            <option value="s1" selected>深睡护脊枕系列</option>
-                                            <option value="s2">舒缓记忆棉枕系列</option>
+                                            <option value="s1" selected>深睡护脊枕系列 (2025款)</option>
+                                            <option value="s2">舒缓记忆棉枕系列 (经典款)</option>
                                         </select>
                                     </div>
 
@@ -688,7 +711,7 @@
             
             <div class="p-6 border-t border-slate-100 bg-white flex justify-end gap-3">
                 <button onclick="app.closeDrawer()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition">取消</button>
-                <button onclick="app.closeDrawer()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">保存规则</button>
+                <button onclick="app.closeDrawer(); app.showToast('规则保存成功')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">保存规则</button>
             </div>
         </div>
 
@@ -993,7 +1016,7 @@
             </div>
             <div class="p-4 bg-slate-50 border-t flex justify-end gap-3">
                 <button onclick="app.closeModal('modal-publish')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-white">取消</button>
-                <button onclick="app.closeModal('modal-publish'); app.toList()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700">
+                <button onclick="app.closeModal('modal-publish'); app.toList(); app.showToast('策略发布成功', 'success')" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700">
                     <i class="fas fa-rocket mr-1"></i>确认发布
                 </button>
             </div>
@@ -1018,7 +1041,7 @@
             </div>
             <div class="p-4 bg-slate-50 border-t flex justify-end gap-3">
                 <button onclick="app.closeModal('modal-delete')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-white">取消</button>
-                <button onclick="app.closeModal('modal-delete')" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">确认删除</button>
+                <button onclick="app.closeModal('modal-delete'); app.showToast('策略包已删除', 'success')" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">确认删除</button>
             </div>
         </div>
     </div>
@@ -1141,64 +1164,149 @@
                 select.value = '';
             },
             
-            // 运行模拟测试
+            // 运行模拟测试 (动态逻辑)
             runSimulation: function() {
                 const log = document.getElementById('sim-log');
                 const preview = document.getElementById('sim-preview');
+                const tagContainer = document.getElementById('sim-tags');
                 
-                // 模拟日志输出
-                log.innerHTML = `
-                    <div class="text-cyan-400">[INFO] 开始执行推荐计算...</div>
-                    <div class="text-slate-500 mt-1">━━━ 第一步: 熔断过滤 ━━━</div>
-                    <div class="text-green-400">✓ 未命中熔断规则，继续执行</div>
-                    <div class="text-slate-500 mt-2">━━━ 第二步: 正向匹配 ━━━</div>
-                    <div class="text-yellow-400">→ 检查规则 #1: 颈椎评分>30 AND 侧睡习惯</div>
-                    <div class="text-green-400">  ✓ 命中! 权重分: 100</div>
-                    <div class="text-yellow-400">→ 检查规则 #2: BMI>28</div>
-                    <div class="text-red-400">  ✗ 未命中 (缺少标签: BMI>28)</div>
-                    <div class="text-slate-500 mt-2">━━━ 第三步: 加权算分 ━━━</div>
-                    <div class="text-white">SKU: 深睡护脊枕（硬/高）</div>
-                    <div class="text-slate-400">  基础分: 80 × 30% = 24</div>
-                    <div class="text-slate-400">  匹配分: 100 × 50% = 50</div>
-                    <div class="text-slate-400">  运营分: 0 × 20% = 0</div>
-                    <div class="text-green-400 font-bold">  总分: 74</div>
-                    <div class="text-slate-500 mt-2">━━━ 第四步: 截断输出 ━━━</div>
-                    <div class="text-cyan-400">[RESULT] 返回 Top 3 商品</div>
-                `;
+                // 获取当前输入的标签
+                const tags = Array.from(tagContainer.children).map(el => el.innerText.trim());
+                const hasNeckRisk = tags.some(t => t.includes('颈椎评分'));
+                const hasSideSleep = tags.some(t => t.includes('侧睡'));
+                const hasBMI = tags.some(t => t.includes('BMI'));
+                const hasAllergy = tags.some(t => t.includes('乳胶过敏'));
+
+                let logHtml = `<div class="text-cyan-400">[INFO] 开始执行推荐计算...</div>`;
                 
-                // 模拟预览结果
-                preview.innerHTML = `
-                    <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-lg mb-4 text-xs leading-relaxed relative">
+                // 1. 熔断
+                logHtml += `<div class="text-slate-500 mt-1">━━━ 第一步: 熔断过滤 ━━━</div>`;
+                if(hasAllergy) {
+                    logHtml += `<div class="text-red-500 font-bold">⚠️ 触发熔断: [乳胶过敏]</div>`;
+                    logHtml += `<div class="text-red-400">  → 剔除: 材质=天然乳胶 (2个 SKU)</div>`;
+                } else {
+                    logHtml += `<div class="text-green-400">✓ 未命中熔断规则，继续执行</div>`;
+                }
+
+                // 2. 正向匹配
+                logHtml += `<div class="text-slate-500 mt-2">━━━ 第二步: 正向匹配 ━━━</div>`;
+                let totalScore = 0;
+                let hitRule1 = false;
+
+                // Rule 1 Check
+                logHtml += `<div class="text-yellow-400">→ 检查规则 #1: 颈椎评分>30 AND 侧睡习惯</div>`;
+                if(hasNeckRisk && hasSideSleep) {
+                     logHtml += `<div class="text-green-400">  ✓ 命中! (Priority: 1)</div>`;
+                     hitRule1 = true;
+                } else {
+                     logHtml += `<div class="text-red-400">  ✗ 未命中 (条件不满足)</div>`;
+                }
+
+                // Rule 2 Check
+                logHtml += `<div class="text-yellow-400">→ 检查规则 #2: BMI>28</div>`;
+                if(hasBMI) {
+                    logHtml += `<div class="text-green-400">  ✓ 命中! (Priority: 2)</div>`;
+                } else {
+                    logHtml += `<div class="text-red-400">  ✗ 未命中 (缺少标签: BMI>28)</div>`;
+                }
+
+                log.innerHTML = logHtml + `<div class="text-cyan-400 mt-2">[RESULT] 计算完成</div>`;
+                
+                // 动态生成预览结果
+                let previewHtml = '';
+                
+                // 顶部话术
+                if(hitRule1) {
+                    previewHtml += `
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-lg mb-4 text-xs leading-relaxed relative fade-in">
                         <div class="absolute -top-2 left-0 w-2 h-2 bg-blue-600"></div>
                         检测到您有<strong>【颈椎风险】</strong>，且习惯<strong>【侧睡】</strong>。建议首选<strong>【硬支撑高枕】</strong>以辅助颈椎复位...
-                    </div>
+                    </div>`;
+                } else if(hasBMI) {
+                     previewHtml += `
+                    <div class="bg-gradient-to-br from-purple-600 to-indigo-600 text-white p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-lg mb-4 text-xs leading-relaxed relative fade-in">
+                        <div class="absolute -top-2 left-0 w-2 h-2 bg-purple-600"></div>
+                        针对您的<strong>【大体重】</strong>特征，建议选择<strong>【强支撑】</strong>材质，避免睡眠塌陷...
+                    </div>`;
+                } else {
+                    previewHtml += `
+                    <div class="bg-slate-700 text-white p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-lg mb-4 text-xs leading-relaxed relative fade-in">
+                        <div class="absolute -top-2 left-0 w-2 h-2 bg-slate-700"></div>
+                        根据您的基础数据，为您推荐以下热销舒适款...
+                    </div>`;
+                }
+
+                previewHtml += `
                     <div class="flex justify-between items-center mb-2 px-1">
                         <span class="text-xs font-bold text-slate-800">为您精选</span>
                         <span class="text-[10px] text-slate-400">综合匹配分排序</span>
-                    </div>
-                    <div class="bg-white p-2 rounded-lg border border-green-300 shadow-sm flex gap-2 mb-2 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 bg-green-500 text-white text-[8px] px-1.5 py-0.5 rounded-bl font-bold">74分</div>
-                        <div class="w-14 h-14 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center text-slate-300"><i class="fas fa-cube"></i></div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-xs font-bold text-slate-700 truncate">深睡护脊枕 (硬/高)</div>
-                            <div class="flex gap-1 mt-1">
-                                <span class="text-[8px] bg-green-50 text-green-700 px-1 rounded border border-green-100">完美匹配</span>
-                            </div>
-                            <div class="text-xs font-bold text-red-500 mt-1">¥ 399</div>
+                    </div>`;
+
+                // 商品列表 (根据命中情况变化)
+                if(hitRule1) {
+                    previewHtml += this.renderProductCard('深睡护脊枕 (硬/高)', '100分', '完美匹配', '399', 'green');
+                }
+                if(hasBMI) {
+                    previewHtml += this.renderProductCard('强支撑弹簧床垫', '95分', '大体重专选', '2999', 'purple');
+                }
+                // 兜底商品
+                previewHtml += this.renderProductCard('舒缓记忆棉枕 (中)', '60分', '备选方案', '299', 'slate');
+
+                preview.innerHTML = previewHtml;
+            },
+
+            renderProductCard: function(name, score, tag, price, color) {
+                const colors = {
+                    green: 'bg-green-500 border-green-300 text-green-700 bg-green-50 border-green-100',
+                    purple: 'bg-purple-500 border-purple-300 text-purple-700 bg-purple-50 border-purple-100',
+                    slate: 'bg-yellow-500 border-slate-200 text-slate-500 bg-slate-100'
+                };
+                // 简化处理颜色类名
+                const badgeBg = color === 'green' ? 'bg-green-500' : (color === 'purple' ? 'bg-purple-500' : 'bg-yellow-500');
+                const tagStyle = color === 'green' ? 'bg-green-50 text-green-700 border-green-100' : (color === 'purple' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-slate-100 text-slate-500');
+
+                return `
+                <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex gap-2 mb-2 relative overflow-hidden fade-in">
+                    <div class="absolute top-0 right-0 ${badgeBg} text-white text-[8px] px-1.5 py-0.5 rounded-bl font-bold">${score}</div>
+                    <div class="w-14 h-14 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center text-slate-300"><i class="fas fa-cube"></i></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-bold text-slate-700 truncate">${name}</div>
+                        <div class="flex gap-1 mt-1">
+                            <span class="text-[8px] ${tagStyle} px-1 rounded border">${tag}</span>
                         </div>
+                        <div class="text-xs font-bold text-red-500 mt-1">¥ ${price}</div>
                     </div>
-                    <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex gap-2 mb-2 opacity-80">
-                        <div class="absolute top-0 right-0 bg-yellow-500 text-white text-[8px] px-1.5 py-0.5 rounded-bl font-bold">68分</div>
-                        <div class="w-14 h-14 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center text-slate-300"><i class="fas fa-cube"></i></div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-xs font-bold text-slate-600 truncate">舒缓记忆棉枕 (中)</div>
-                            <div class="flex gap-1 mt-1">
-                                <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">备选方案</span>
-                            </div>
-                            <div class="text-xs font-bold text-red-500 mt-1">¥ 299</div>
-                        </div>
-                    </div>
+                </div>`;
+            },
+
+            // Toast 提示
+            showToast: function(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
+                toast.innerHTML = `
+                    <i class="fas ${type === 'success' ? 'fa-check-circle text-green-500' : 'fa-exclamation-circle text-red-500'} text-lg"></i>
+                    <span>${message}</span>
                 `;
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOut 0.3s ease-in forwards';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            },
+
+            // 筛选占位
+            filter: function(btn, type) {
+                // 样式切换
+                document.querySelectorAll('.filter-tab').forEach(el => {
+                    el.classList.remove('active', 'bg-white', 'text-blue-600', 'shadow-sm');
+                    el.classList.add('hover:text-slate-700');
+                });
+                btn.classList.add('active', 'bg-white', 'text-blue-600', 'shadow-sm');
+                btn.classList.remove('hover:text-slate-700');
+                
+                this.showToast(`已切换视图: ${btn.innerText}`);
             }
         };
         
