@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI枕头专家分析报告 - 浅色清新版</title>
+    <!-- 引入设计规范指定的字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: '#faf9fc',
+                        'surface-container-lowest': '#ffffff',
+                        'surface-container-low': '#f5f3f7',
+                        'surface-container': '#edeaf1',
+                        'surface-container-high': '#e3deeb',
+                        primary: '#4e2f95',
+                        'primary-container': '#6649ae',
+                        'on-surface': '#1b1b1e',
+                        'on-surface-variant': '#484554',
+                        error: '#ba1a1a',
+                        'error-container': '#fce8ec',
+                        secondary: '#6b5584',
+                        tertiary: '#454255'
+                    },
+                    fontFamily: {
+                        sans: ['Manrope', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        display: ['Manrope', '-apple-system', 'sans-serif']
+                    },
+                    borderRadius: {
+                        'xl': '1.5rem',
+                        'lg': '1rem',
+                        'md': '0.75rem'
+                    },
+                    boxShadow: {
+                        'soft': '0px 12px 32px rgba(78, 47, 149, 0.06)'
+                    },
+                    spacing: {
+                        '3': '0.75rem',
+                        '4': '1rem',
+                        '5': '1.25rem',
+                        '8': '2rem',
+                        '10': '2.5rem',
+                        '12': '3rem'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #faf9fc; 
+            color: #484554;
+            -webkit-font-smoothing: antialiased;
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        .bg-card {
+            background-color: #ffffff;
+            border-radius: 1rem; 
+            box-shadow: 0px 12px 32px rgba(78, 47, 149, 0.02);
+        }
+        
+        /* 网格背景 */
+        .bg-grid {
+            background-color: #f5f3f7;
+            background-image: linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* 标签指示条 */
+        .tab-active {
+            color: #1b1b1e !important;
+        }
+        .tab-active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            background-color: #4e2f95;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="max-w-md mx-auto text-sm pb-10 relative">
+
+    <!-- 顶部导航栏 -->
+    <div class="flex items-center justify-between p-4 text-[#1b1b1e] bg-white sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <span class="text-lg font-light">&lt;</span>
+        </div>
+        <div class="font-medium tracking-widest text-base font-['Manrope']">的体测报告</div>
+        <div class="tracking-widest font-bold">...</div>
+    </div>
+
+    <!-- 选项卡 (吸顶效果，带有阴影) -->
+    <div class="flex justify-around px-2 pt-3 bg-white/80 backdrop-blur-[20px] text-[#484554] font-medium text-sm shadow-sm relative z-20 sticky top-[60px]">
+        <div class="pb-3 relative">体成分报告</div>
+        <div class="pb-3 relative">体态报告</div>
+        <div class="pb-3 relative">脊柱报告</div>
+        <div class="pb-3 font-bold px-1 relative tab-active text-[#1b1b1e]">AI推荐</div>
+    </div>
+
+    <!-- 3D 数字人模型 (融入蓝色网格背景) -->
+    <div class="relative bg-grid h-72 flex flex-col items-center justify-center overflow-hidden mb-4">
+        <!-- 真实的3D人体的背影图 -->
+        <img src="3d_body_back.png" class="h-[120%] w-auto object-cover transition-opacity duration-300 mix-blend-multiply" id="body-model-img" style="object-position: center 20%;" alt="3D体态数字人" />
+        
+        <!-- 左侧悬浮按钮 (模拟原图) -->
+        <div class="absolute top-4 left-4 flex flex-col gap-3">
+            <div class="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex flex-col items-center justify-center shadow-[0px_12px_32px_rgba(78,47,149,0.06)] text-[#4e2f95]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                <span class="text-[8px] mt-0.5">我的</span>
+            </div>
+        </div>
+
+        
+        <!-- 脊柱模型 开关按钮 -->
+        <div class="absolute top-4 right-4 flex items-center gap-2 z-10 bg-white/80 px-2 py-1.5 rounded-full shadow-[0px_12px_32px_rgba(78,47,149,0.06)] backdrop-blur-sm">
+            <span class="text-[10px] text-[#484554] font-medium">脊柱模型</span>
+            <button onclick="document.getElementById('body-model-img').classList.toggle('opacity-30')" class="relative inline-flex h-4 w-7 items-center rounded-full bg-[#f5f3f7] transition-colors duration-300 focus:outline-none" id="spine-toggle">
+                <span class="inline-block h-3 w-3 transform rounded-full bg-white transition duration-300 translate-x-0.5 shadow-sm" id="spine-toggle-knob"></span>
+            </button>
+        </div>
+        <!-- 开关简单动效 JS -->
+        <script>
+            document.getElementById('spine-toggle').addEventListener('click', function() {
+                const knob = document.getElementById('spine-toggle-knob');
+                if (this.classList.contains('bg-[#4e2f95]')) {
+                    this.classList.remove('bg-[#4e2f95]');
+                    this.classList.add('bg-[#f5f3f7]');
+                    knob.classList.remove('translate-x-3.5');
+                    knob.classList.add('translate-x-0.5');
+                } else {
+                    this.classList.remove('bg-[#f5f3f7]');
+                    this.classList.add('bg-[#4e2f95]');
+                    knob.classList.remove('translate-x-0.5');
+                    knob.classList.add('translate-x-3.5');
+                }
+            });
+        </script>
+    </div>
+
+    <!-- 总览信息 (白底卡片) -->
+    <div class="px-4 mb-4 relative">
+        <div class="flex justify-between items-end mb-3">
+            <div class="text-base font-bold tracking-wide flex items-center gap-2 text-[#1b1b1e]">
+                <span class="w-1.5 h-4 bg-[#4e2f95] rounded-full"></span>
+                总览数据
+            </div>
+            <!-- 小眼睛：用于隐藏/显示个人信息 -->
+            <button onclick="document.getElementById('user-info-bar').classList.toggle('opacity-0')" class="text-[#484554] hover:text-[#4e2f95] transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            </button>
+        </div>
+        <div id="user-info-bar" class="flex justify-center items-center text-xs bg-white py-3.5 rounded-xl text-[#484554] gap-3 shadow-[0px_12px_32px_rgba(78,47,149,0.02)] transition-opacity duration-300 font-medium">
+            <span>身高 160.0cm</span>
+            <span class="text-[#c9c4d7]">|</span>
+            <span>体重 51.5kg</span>
+            <span class="text-[#c9c4d7]">|</span>
+            <span>年龄 22</span>
+            <span class="text-[#c9c4d7]">|</span>
+            <span class="text-[#4e2f95] bg-[#f5f3f7] px-2 py-0.5 rounded-md">BMI 25</span>
+        </div>
+    </div>
+
+    <!-- 3D体表尺寸测量 -->
+    <div class="px-4 mb-5">
+        <div class="bg-card p-4">
+            <div class="flex justify-between items-center mb-3">
+                <div class="font-bold text-base text-[#1b1b1e] flex items-center gap-2">
+                    <span class="w-1.5 h-4 bg-[#4e2f95] rounded-full"></span> 3D体表尺寸测量
+                </div>
+                <div class="text-[11px] text-[#484554] bg-[#f5f3f7] px-2 py-0.5 rounded-full">单位: cm</div>
+            </div>
+            
+            <!-- 整体示意图 -->
+            <div class="mb-4 bg-[#f5f3f7] rounded-xl overflow-hidden flex justify-center items-center p-3">
+                <img src="3d_measurements_diagram.png" class="w-full h-auto object-contain mix-blend-multiply" alt="3D体表尺寸图示" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <!-- Data cards -->
+                <div class="bg-[#f5f3f7] p-2.5 rounded-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-white text-[#4e2f95] text-[10px] px-1.5 py-0.5 rounded font-bold shadow-[0px_2px_8px_rgba(78,47,149,0.04)]">L1</span>
+                            <span class="font-bold text-[12px] text-[#1b1b1e]">耳宽</span>
+                        </div>
+                        <span class="text-[#4e2f95] font-bold text-[15px]">11.7</span>
+                    </div>
+                    <div class="text-[10px] text-[#484554] leading-snug">两侧耳廓最外侧水平距离</div>
+                </div>
+                
+                <div class="bg-[#f5f3f7] p-2.5 rounded-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-white text-[#4e2f95] text-[10px] px-1.5 py-0.5 rounded font-bold shadow-[0px_2px_8px_rgba(78,47,149,0.04)]">L2</span>
+                            <span class="font-bold text-[12px] text-[#1b1b1e]">颈宽</span>
+                        </div>
+                        <span class="text-[#4e2f95] font-bold text-[15px]">12.2</span>
+                    </div>
+                    <div class="text-[10px] text-[#484554] leading-snug">颈部最宽处的水平横向距离</div>
+                </div>
+
+                <div class="bg-[#f5f3f7] p-2.5 rounded-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-white text-[#4e2f95] text-[10px] px-1.5 py-0.5 rounded font-bold shadow-[0px_2px_8px_rgba(78,47,149,0.04)]">L3</span>
+                            <span class="font-bold text-[12px] text-[#1b1b1e]">肩宽</span>
+                        </div>
+                        <span class="text-[#4e2f95] font-bold text-[15px]">13.4</span>
+                    </div>
+                    <div class="text-[10px] text-[#484554] leading-snug">左右肩峰点间水平直线距离</div>
+                </div>
+
+                <div class="bg-[#f5f3f7] p-2.5 rounded-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-white text-[#4e2f95] text-[10px] px-1.5 py-0.5 rounded font-bold shadow-[0px_2px_8px_rgba(78,47,149,0.04)]">L4</span>
+                            <span class="font-bold text-[12px] text-[#1b1b1e]">头背距</span>
+                        </div>
+                        <span class="text-[#4e2f95] font-bold text-[15px]">13.6</span>
+                    </div>
+                    <div class="text-[10px] text-[#484554] leading-snug">背部后缘至后脑最突出点</div>
+                </div>
+
+                <div class="bg-[#f5f3f7] p-2.5 rounded-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-white text-[#4e2f95] text-[10px] px-1.5 py-0.5 rounded font-bold shadow-[0px_2px_8px_rgba(78,47,149,0.04)]">L5</span>
+                            <span class="font-bold text-[12px] text-[#1b1b1e]">颈深</span>
+                        </div>
+                        <span class="text-[#1b1b1e] font-bold text-[15px]">16.0</span>
+                    </div>
+                    <div class="text-[10px] text-[#484554] leading-snug">背部后缘至第七颈椎点距离</div>
+                </div>
+
+                <div class="bg-[#f5f3f7] p-2.5 rounded-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-white text-[#4e2f95] text-[10px] px-1.5 py-0.5 rounded font-bold shadow-[0px_2px_8px_rgba(78,47,149,0.04)]">L6</span>
+                            <span class="font-bold text-[12px] text-[#1b1b1e]">背深</span>
+                        </div>
+                        <span class="text-[#1b1b1e] font-bold text-[15px]">3.0</span>
+                    </div>
+                    <div class="text-[10px] text-[#484554] leading-snug">背部后缘至肩峰点水平距离</div>
+                </div>
+
+                <div class="bg-[#f5f3f7] p-2.5 rounded-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-white text-[#4e2f95] text-[10px] px-1.5 py-0.5 rounded font-bold shadow-[0px_2px_8px_rgba(78,47,149,0.04)]">L7</span>
+                            <span class="font-bold text-[12px] text-[#1b1b1e]">头颈高</span>
+                        </div>
+                        <span class="text-[#1b1b1e] font-bold text-[15px]">6.3</span>
+                    </div>
+                    <div class="text-[10px] text-[#484554] leading-snug">头顶至第七颈椎点垂直高度</div>
+                </div>
+
+                <div class="bg-[#f5f3f7] p-2.5 rounded-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-white text-[#4e2f95] text-[10px] px-1.5 py-0.5 rounded font-bold shadow-[0px_2px_8px_rgba(78,47,149,0.04)]">L8</span>
+                            <span class="font-bold text-[12px] text-[#1b1b1e]">头背高</span>
+                        </div>
+                        <span class="text-[#1b1b1e] font-bold text-[15px]">33.1</span>
+                    </div>
+                    <div class="text-[10px] text-[#484554] leading-snug">头顶至肩峰点垂直高度</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 颈脊健康分析 -->
+    <div class="px-4 mb-5">
+        <div class="bg-card p-4">
+            <div class="font-bold text-base text-[#1b1b1e] flex items-center gap-2 mb-4">
+                <span class="w-1.5 h-4 bg-[#4e2f95] rounded-full"></span> 颈脊健康分析
+            </div>
+
+            <!-- 颈椎 -->
+            <div class="mb-4">
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex justify-between items-center mb-2">
+                    <div>
+                        <div class="font-bold text-[15px] mb-0.5 text-[#1b1b1e]">颈椎</div>
+                        <div class="text-[11px] text-[#484554]">更需要关注颈部承托</div>
+                    </div>
+                    <div class="bg-[#fce8ec] text-[#ba1a1a] px-2 py-1 rounded-full text-[11px] font-bold">
+                        重度异常
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <!-- 颈椎侧偏 -->
+                    <div class="bg-white rounded-xl p-2 text-center shadow-[0px_12px_32px_rgba(78,47,149,0.03)]">
+                        <!-- 去除了暗黑模式的滤镜反相，保持图片原本的蓝白清爽感 -->
+                        <div class="h-[105px] w-full mb-1 bg-[url('spine_health.png')] bg-no-repeat opacity-90 mix-blend-multiply" style="background-size: 220% auto; background-position: 2% 19%;"></div>
+                        <div class="font-bold text-xs mb-1 text-[#1b1b1e]">颈椎侧偏</div>
+                        <div class="inline-block bg-[#fce8ec] text-[#ba1a1a] text-[10px] px-2 py-0.5 rounded-full mb-1">轻度右倾</div>
+                        <div class="text-[10px] text-[#484554]">-7° (-5°~5°)</div>
+                    </div>
+                    <!-- 颈椎前伸 -->
+                    <div class="bg-white rounded-xl p-2 text-center shadow-[0px_12px_32px_rgba(78,47,149,0.03)]">
+                        <div class="h-[105px] w-full mb-1 bg-[url('spine_health.png')] bg-no-repeat opacity-90 mix-blend-multiply" style="background-size: 220% auto; background-position: 98% 19%;"></div>
+                        <div class="font-bold text-xs mb-1 text-[#1b1b1e]">颈椎前伸</div>
+                        <div class="inline-block bg-[#fce8ec] text-[#ba1a1a] text-[10px] px-2 py-0.5 rounded-full mb-1">前引倾向</div>
+                        <div class="text-[10px] text-[#484554]">37° (-5°~5°)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 胸椎 -->
+            <div class="mb-4">
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex justify-between items-center mb-2">
+                    <div>
+                        <div class="font-bold text-[15px] mb-0.5 text-[#1b1b1e]">胸椎</div>
+                        <div class="text-[11px] text-[#484554]">更需要关注肩背过渡支撑</div>
+                    </div>
+                    <div class="bg-[#fce8ec] text-[#ba1a1a] px-2 py-1 rounded-full text-[11px] font-bold">
+                        重度异常
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <!-- 左肩内收度 -->
+                    <div class="bg-white rounded-xl p-2 text-center shadow-[0px_12px_32px_rgba(78,47,149,0.03)]">
+                        <div class="h-[105px] w-full mb-1 bg-[url('spine_health.png')] bg-no-repeat opacity-90 mix-blend-multiply" style="background-size: 220% auto; background-position: 2% 54.5%;"></div>
+                        <div class="font-bold text-xs mb-1 text-[#1b1b1e]">左肩内收度</div>
+                        <div class="inline-block bg-[#fce8ec] text-[#ba1a1a] text-[10px] px-2 py-0.5 rounded-full mb-1">内收</div>
+                        <div class="text-[10px] text-[#484554]">-7° (-5°~5°)</div>
+                    </div>
+                    <!-- 右肩内收度 -->
+                    <div class="bg-white rounded-xl p-2 text-center shadow-[0px_12px_32px_rgba(78,47,149,0.03)]">
+                        <div class="h-[105px] w-full mb-1 bg-[url('spine_health.png')] bg-no-repeat opacity-90 mix-blend-multiply" style="background-size: 220% auto; background-position: 98% 54.5%;"></div>
+                        <div class="font-bold text-xs mb-1 text-[#1b1b1e]">右肩内收度</div>
+                        <div class="inline-block bg-[#fce8ec] text-[#ba1a1a] text-[10px] px-2 py-0.5 rounded-full mb-1">内收</div>
+                        <div class="text-[10px] text-[#484554]">37° (-5°~5°)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 腰椎 -->
+            <div>
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex justify-between items-center mb-2">
+                    <div>
+                        <div class="font-bold text-[15px] mb-0.5 text-[#1b1b1e]">腰椎</div>
+                        <div class="text-[11px] text-[#484554]">当前腰部结构相对平衡</div>
+                    </div>
+                    <div class="bg-white text-[#4e2f95] px-2 py-1 rounded-full text-[11px] font-bold shadow-[0px_12px_32px_rgba(78,47,149,0.06)]">
+                        正常
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <!-- 肩部平衡 -->
+                    <div class="bg-white rounded-xl p-2 text-center shadow-[0px_12px_32px_rgba(78,47,149,0.03)]">
+                        <div class="h-[105px] w-full mb-1 bg-[url('spine_health.png')] bg-no-repeat opacity-90 mix-blend-multiply" style="background-size: 220% auto; background-position: 2% 89%;"></div>
+                        <div class="font-bold text-xs mb-1 text-[#1b1b1e]">肩部平衡</div>
+                        <div class="inline-block bg-[#fce8ec] text-[#ba1a1a] text-[10px] px-2 py-0.5 rounded-full mb-1">左肩偏高</div>
+                        <div class="text-[10px] text-[#484554]">2.7° (-5°~5°)</div>
+                    </div>
+                    <!-- 骨盆前移 -->
+                    <div class="bg-white rounded-xl p-2 text-center shadow-[0px_12px_32px_rgba(78,47,149,0.03)]">
+                        <div class="h-[105px] w-full mb-1 bg-[url('spine_health.png')] bg-no-repeat opacity-90 mix-blend-multiply" style="background-size: 220% auto; background-position: 98% 89%;"></div>
+                        <div class="font-bold text-xs mb-1 text-[#1b1b1e]">骨盆前移</div>
+                        <div class="inline-block bg-[#fce8ec] text-[#ba1a1a] text-[10px] px-2 py-0.5 rounded-full mb-1">轻度前移</div>
+                        <div class="text-[10px] text-[#484554]">17.2° (-30°~45°)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 问卷信息 -->
+    <div class="px-4 mb-5">
+        <div class="bg-card p-4">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-1.5 h-4 bg-[#4e2f95] rounded-full"></span>
+                <span class="font-bold text-base text-[#1b1b1e]">问卷信息</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-center">
+                <!-- 主睡姿 -->
+                <div class="flex flex-col items-center">
+                    <div class="w-12 h-12 bg-[#f5f3f7] rounded-full flex items-center justify-center text-[#4e2f95] mb-2">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M7 11a2 2 0 100-4 2 2 0 000 4zm14 2h-9v2H4v-5H2v13h2v-3h16v3h2v-8a2 2 0 00-2-2z"/>
+                        </svg>
+                    </div>
+                    <div class="text-[11px] text-[#484554] mb-0.5">主睡姿</div>
+                    <div class="text-xs text-[#1b1b1e] font-bold">侧卧</div>
+                </div>
+                <!-- 床垫硬度 -->
+                <div class="flex flex-col items-center">
+                    <div class="w-12 h-12 bg-[#f5f3f7] rounded-full flex items-center justify-center text-[#4e2f95] mb-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 14h16M4 14a2 2 0 01-2-2V8a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2M4 14v4h2v-4m12 4v-4h2v4"/>
+                        </svg>
+                    </div>
+                    <div class="text-[11px] text-[#484554] mb-0.5">床垫硬度</div>
+                    <div class="text-xs text-[#1b1b1e] font-bold">中等</div>
+                </div>
+                <!-- 肩颈不适 -->
+                <div class="flex flex-col items-center">
+                    <div class="w-12 h-12 bg-[#f5f3f7] rounded-full flex items-center justify-center text-[#4e2f95] mb-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 16c2-2 3-5 3-7V6m10 10c-2-2-3-5-3-7V6M9 13s1.5 2 3 2 3-2 3-2"/>
+                        </svg>
+                    </div>
+                    <div class="text-[11px] text-[#484554] mb-0.5">肩颈不适</div>
+                    <div class="text-xs text-[#1b1b1e] font-bold">无</div>
+                </div>
+                <!-- 睡眠问题 -->
+                <div class="flex flex-col items-center">
+                    <div class="w-12 h-12 bg-[#f5f3f7] rounded-full flex items-center justify-center text-[#4e2f95] mb-2">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 13h10M7 13a1 1 0 01-1-1v-2a1 1 0 011-1h10a1 1 0 011 1v2a1 1 0 01-1 1M7 13v2m10-2v2"/>
+                        </svg>
+                    </div>
+                    <div class="text-[11px] text-[#484554] mb-0.5">睡眠问题</div>
+                    <div class="text-xs text-[#1b1b1e] font-bold">无</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 推荐助手 & 选床助手 -->
+    <div class="px-4 mb-5 space-y-4">
+        
+        <!-- AI 推荐助手 -->
+        <div class="bg-white rounded-[1rem] overflow-hidden shadow-[0px_12px_32px_rgba(78,47,149,0.06)]">
+            <!-- Header (Violet Gradient) -->
+            <div class="bg-gradient-to-br from-[#4e2f95] to-[#6649ae] p-4 relative overflow-hidden">
+                <div class="relative z-10">
+                    <div class="font-bold text-base text-white mb-1 flex items-center gap-1.5">
+                        AI 推荐助手
+                    </div>
+                    <div class="text-[10px] text-white/80">结合头颈结构、头重与睡姿输出方向性建议</div>
+                </div>
+                <!-- 装饰图标 (月亮) -->
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                    <svg class="w-5 h-5 text-yellow-100" fill="currentColor" viewBox="0 0 24 24"><path d="M12.1 22c-5.5 0-10-4.5-10-10 0-4.5 3-8.3 7.3-9.6.3-.1.7.1.8.4.1.3 0 .7-.3.9-3.2 1.7-5.3 4.9-5.3 8.3 0 4.4 3.6 8 8 8 3.4 0 6.6-2.1 8.3-5.3.1-.3.5-.5.9-.3.3.1.5.5.4.8-1.3 4.3-5.1 7.3-9.6 7.3z"/></svg>
+                </div>
+            </div>
+            <!-- Content (网格) -->
+            <div class="p-3 grid grid-cols-2 gap-2 bg-white">
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex flex-col justify-center">
+                    <div class="text-[10px] text-[#484554] font-medium mb-0.5">推荐枕高</div>
+                    <div class="font-bold text-[#1b1b1e] text-sm">9-10cm</div>
+                </div>
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex flex-col justify-center">
+                    <div class="text-[10px] text-[#484554] font-medium mb-0.5">推荐枕型</div>
+                    <div class="font-bold text-[#1b1b1e] text-sm">分区承托型</div>
+                </div>
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex flex-col justify-center">
+                    <div class="text-[10px] text-[#484554] font-medium mb-0.5">支撑类型</div>
+                    <div class="font-bold text-[#1b1b1e] text-sm">中高支撑</div>
+                </div>
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex flex-col justify-center">
+                    <div class="text-[10px] text-[#484554] font-medium mb-0.5">适合睡姿</div>
+                    <div class="font-bold text-[#1b1b1e] text-sm">侧睡 / 混合睡</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI 选床助手 -->
+        <div class="bg-white rounded-[1rem] overflow-hidden shadow-[0px_12px_32px_rgba(78,47,149,0.06)]">
+            <!-- Header (Deep Slate/Secondary Gradient) -->
+            <div class="bg-gradient-to-br from-[#454255] to-[#6b5584] p-4 relative overflow-hidden">
+                <div class="relative z-10">
+                    <div class="font-bold text-base text-white mb-1 flex items-center gap-1.5">
+                        AI 选床助手
+                    </div>
+                    <div class="text-[10px] text-white/80">结合脊柱、体态与当前睡眠体验输出方向性建议</div>
+                </div>
+                <!-- 装饰图标 (床) -->
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                    <svg class="w-6 h-6 text-indigo-100" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 14h16M4 14a2 2 0 01-2-2V8a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2M4 14v4h2v-4m12 4v-4h2v4"/></svg>
+                </div>
+            </div>
+            <!-- Content (网格) -->
+            <div class="p-3 grid grid-cols-2 gap-2 bg-white">
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex flex-col justify-center">
+                    <div class="text-[10px] text-[#484554] font-medium mb-0.5">推荐软硬度</div>
+                    <div class="font-bold text-[#1b1b1e] text-sm">5-6级</div>
+                </div>
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex flex-col justify-center">
+                    <div class="text-[10px] text-[#484554] font-medium mb-0.5">推荐贴合度</div>
+                    <div class="font-bold text-[#1b1b1e] text-sm">4-5级</div>
+                </div>
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex flex-col justify-center">
+                    <div class="text-[10px] text-[#484554] font-medium mb-0.5">重点支撑区</div>
+                    <div class="font-bold text-[#1b1b1e] text-sm">腰部 / 肩部 / 臀部</div>
+                </div>
+                <div class="bg-[#f5f3f7] rounded-xl p-3 flex flex-col justify-center">
+                    <div class="text-[10px] text-[#484554] font-medium mb-0.5">床垫类型</div>
+                    <div class="font-bold text-[#1b1b1e] text-sm">分区支撑型</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 商品推荐 -->
+    <div class="px-4 mb-8">
+        <div class="bg-card p-4">
+            <div class="font-bold text-base text-[#1b1b1e] flex items-center gap-2 mb-3">
+                <span class="w-1.5 h-4 bg-[#4e2f95] rounded-full"></span> 专属产品推荐
+            </div>
+            
+            <div class="rounded-[1rem] overflow-hidden bg-white shadow-[0px_12px_32px_rgba(78,47,149,0.06)]">
+                <!-- 商品图片区域 -->
+                <div class="relative bg-white py-4 px-4 flex flex-col items-center justify-center overflow-hidden group">
+                    <div class="absolute top-3 left-3 bg-gradient-to-r from-[#4e2f95] to-[#6649ae] text-white text-[11px] px-2.5 py-1 rounded-md shadow-[0px_12px_32px_rgba(78,47,149,0.2)] font-bold z-10">
+                        型号选择：1号枕
+                    </div>
+                    <img src="pillow_product.png" class="w-full h-auto object-contain group-hover:scale-105 transition-transform duration-500" alt="护颈枕展示" />
+                    
+                    <!-- 尺寸信息简览 -->
+                    <div class="flex items-center justify-center gap-4 mt-2 w-full">
+                        <div class="bg-[#f5f3f7] text-[#484554] text-[10px] px-2 py-1 rounded-md font-medium">基础高度: 8cm</div>
+                        <div class="bg-white text-[#4e2f95] shadow-[0px_4px_12px_rgba(78,47,149,0.08)] text-[10px] px-2 py-1 rounded-md font-medium">专属调节层: 2cm</div>
+                    </div>
+                </div>
+                
+                <!-- 下半部分配置信息区 -->
+                <div class="p-4 bg-white">
+                    <div class="text-center text-xs font-bold text-[#484554] mb-2">弹力回弹 · 紧密包裹</div>
+                    
+                    <div class="bg-white rounded-lg p-3 text-[11px] text-[#6649ae] leading-relaxed text-center shadow-[0px_12px_32px_rgba(78,47,149,0.03)] border border-[#f5f3f7]">
+                        高弹贴合，随头型自适应，包裹感强，减少翻动摩擦
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分区调节 -->
+    <div class="px-4 mb-8">
+        <div class="bg-card p-4">
+            <div class="font-bold text-base text-[#1b1b1e] flex items-center gap-2 mb-4">
+                <span class="w-1.5 h-4 bg-[#4e2f95] rounded-full"></span> 分区调节
+            </div>
+
+            <!-- Image Container -->
+            <div class="rounded-xl overflow-hidden mb-5 relative bg-[#f5f3f7] h-[180px] w-full border border-[#edeaf1]">
+                <!-- 使用绝对定位和负top值裁剪掉截图的多余部分，只保留枕头图示 -->
+                <img src="pillow_zones_full.png" class="absolute w-full h-auto" style="top: -75px;" alt="枕头分区图示" />
+            </div>
+
+            <!-- Info Header -->
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-6 h-6 bg-[#4e2f95] text-white rounded-full flex items-center justify-center font-bold text-sm shadow-[0px_4px_12px_rgba(78,47,149,0.2)]">4</div>
+                <div class="font-bold text-[15px] text-[#1b1b1e]">上头窝区</div>
+                <div class="bg-[#f5f3f7] text-[#4e2f95] text-[10px] px-2 py-0.5 rounded-full font-medium border border-[#edeaf1]">头部定位</div>
+            </div>
+
+            <!-- Bullet List -->
+            <ul class="space-y-2 text-xs text-[#484554] mb-5">
+                <li class="flex items-start gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#4e2f95]/80 mt-1 shrink-0"></div>
+                    <span class="leading-relaxed"><strong class="text-[#1b1b1e] font-bold">【上头窝区】</strong>头部上方凹陷区，配合下头窝形成完整头窝</span>
+                </li>
+                <li class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#4e2f95]/80 shrink-0"></div>
+                    <span>有效高度：<span class="font-bold text-[#1b1b1e]">4.9cm</span></span>
+                </li>
+                <li class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#4e2f95]/80 shrink-0"></div>
+                    <span>基础 4.9cm + 调节 0cm</span>
+                </li>
+            </ul>
+
+            <!-- Slider -->
+            <div class="flex items-center gap-3 mb-6 bg-[#f5f3f7] p-3 rounded-xl border border-[#edeaf1]">
+                <div class="text-[11px] font-bold text-[#1b1b1e] shrink-0">高度调节</div>
+                <div class="flex-1 relative h-1.5 bg-[#e3deeb] rounded-full">
+                    <!-- Progress -->
+                    <div class="absolute left-0 top-0 h-full w-[40%] bg-[#4e2f95] rounded-full"></div>
+                    <!-- Thumb -->
+                    <div class="absolute left-[40%] top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-white border-[2.5px] border-[#4e2f95] rounded-full shadow-sm"></div>
+                </div>
+                <div class="bg-white text-[#4e2f95] font-bold text-xs px-2.5 py-1 rounded-md shadow-[0px_2px_8px_rgba(78,47,149,0.06)] border border-[#edeaf1]">0</div>
+            </div>
+
+            <!-- Pagination/Zones -->
+            <div class="flex justify-center gap-1.5 mb-6">
+                <button class="w-7 h-7 rounded-full text-[11px] font-bold bg-white text-[#484554] border border-[#edeaf1] shadow-sm transition-colors hover:bg-[#f5f3f7]">1</button>
+                <button class="w-7 h-7 rounded-full text-[11px] font-bold bg-white text-[#484554] border border-[#edeaf1] shadow-sm transition-colors hover:bg-[#f5f3f7]">2</button>
+                <button class="w-7 h-7 rounded-full text-[11px] font-bold bg-white text-[#484554] border border-[#edeaf1] shadow-sm transition-colors hover:bg-[#f5f3f7]">3</button>
+                <button class="w-7 h-7 rounded-full text-[11px] font-bold bg-[#4e2f95] text-white shadow-[0px_4px_12px_rgba(78,47,149,0.25)]">4</button>
+                <button class="w-7 h-7 rounded-full text-[11px] font-bold bg-white text-[#484554] border border-[#edeaf1] shadow-sm transition-colors hover:bg-[#f5f3f7]">5</button>
+                <button class="w-7 h-7 rounded-full text-[11px] font-bold bg-white text-[#484554] border border-[#edeaf1] shadow-sm transition-colors hover:bg-[#f5f3f7]">6</button>
+                <button class="w-7 h-7 rounded-full text-[11px] font-bold bg-white text-[#484554] border border-[#edeaf1] shadow-sm transition-colors hover:bg-[#f5f3f7]">7</button>
+                <button class="w-7 h-7 rounded-full text-[11px] font-bold bg-white text-[#484554] border border-[#edeaf1] shadow-sm transition-colors hover:bg-[#f5f3f7]">8</button>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-3">
+                <button class="flex-1 bg-[#4e2f95] text-white py-2.5 rounded-xl text-sm font-bold shadow-[0px_8px_20px_rgba(78,47,149,0.15)] active:scale-[0.98] transition-transform">保存设置</button>
+                <button class="flex-1 bg-white text-[#484554] py-2.5 rounded-xl text-sm font-bold border border-[#edeaf1] shadow-sm active:scale-[0.98] transition-transform">重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 方案预览 -->
+    <div class="px-4 mb-8">
+        <div class="bg-card p-4">
+            <div class="font-bold text-[15px] text-[#4e2f95] mb-2">
+                臻享定制枕 · 方案预览
+            </div>
+            
+            <div class="text-[11px] text-[#484554] mb-4">
+                <span class="font-bold text-[#1b1b1e]">型号:</span> 1号枕 · 基础高度 8cm · 面料 云感弹力 (A版)
+            </div>
+
+            <!-- Table -->
+            <div class="rounded-xl border border-[#edeaf1] mb-5 overflow-hidden">
+                <table class="w-full text-[10px] text-center table-fixed">
+                    <thead>
+                        <tr class="bg-[#f5f3f7] text-[#484554]">
+                            <th class="py-2 px-1 font-bold border-b border-r border-[#edeaf1] text-center w-[28%]">区域</th>
+                            <th class="py-2 px-1 font-bold border-b border-r border-[#edeaf1] w-[18%]">基础高度</th>
+                            <th class="py-2 px-1 font-bold border-b border-r border-[#edeaf1] w-[18%]">调节量</th>
+                            <th class="py-2 px-1 font-bold border-b border-r border-[#edeaf1] w-[20%]">调节后高度</th>
+                            <th class="py-2 px-1 font-bold border-b border-[#edeaf1] w-[16%]">填充克重</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-[#1b1b1e]">
+                        <tr class="border-b border-[#edeaf1]">
+                            <td class="py-2 px-1.5 border-r border-[#edeaf1] text-left leading-tight">Z1 仰睡肩颈承托区</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">8.2cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">0cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">8.2cm</td>
+                            <td class="py-2 px-1">0g</td>
+                        </tr>
+                        <tr class="border-b border-[#edeaf1]">
+                            <td class="py-2 px-1.5 border-r border-[#edeaf1] text-left leading-tight">Z2 仰睡颈部承托区</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">7.7cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">0cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">7.7cm</td>
+                            <td class="py-2 px-1">0g</td>
+                        </tr>
+                        <tr class="border-b border-[#edeaf1]">
+                            <td class="py-2 px-1.5 border-r border-[#edeaf1] text-left leading-tight">Z3 下头窝区</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">4.3cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">0.5cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">4.8cm</td>
+                            <td class="py-2 px-1">8g</td>
+                        </tr>
+                        <tr class="border-b border-[#edeaf1]">
+                            <td class="py-2 px-1.5 border-r border-[#edeaf1] text-left leading-tight">Z4 上头窝区</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">4.9cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">0cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">4.9cm</td>
+                            <td class="py-2 px-1">0g</td>
+                        </tr>
+                        <tr class="border-b border-[#edeaf1]">
+                            <td class="py-2 px-1.5 border-r border-[#edeaf1] text-left leading-tight">Z5 左颈承托区</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">10.4cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">0cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">10.4cm</td>
+                            <td class="py-2 px-1">0g</td>
+                        </tr>
+                        <tr class="border-b border-[#edeaf1]">
+                            <td class="py-2 px-1.5 border-r border-[#edeaf1] text-left leading-tight">Z6 右颈承托区</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">10.4cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">0cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">10.4cm</td>
+                            <td class="py-2 px-1">0g</td>
+                        </tr>
+                        <tr class="border-b border-[#edeaf1]">
+                            <td class="py-2 px-1.5 border-r border-[#edeaf1] text-left leading-tight">Z7 左上侧睡区</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">8.5cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">0cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">8.5cm</td>
+                            <td class="py-2 px-1">0g</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-1.5 border-r border-[#edeaf1] text-left leading-tight">Z8 右上侧睡区</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">8.5cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">0cm</td>
+                            <td class="py-2 px-1 border-r border-[#edeaf1]">8.5cm</td>
+                            <td class="py-2 px-1">0g</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Divider -->
+            <div class="h-px w-full bg-[#edeaf1] mb-4"></div>
+
+            <!-- Comfort Rating -->
+            <div class="mb-5">
+                <div class="text-[13px] font-bold text-[#4e2f95] mb-1.5">舒适度评分</div>
+                <div class="flex items-center gap-1.5">
+                    <div class="flex items-center text-[#ffc107]">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                    </div>
+                    <span class="text-sm font-bold text-[#1b1b1e]">5</span>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div>
+                <button class="bg-white text-[#1b1b1e] border border-[#edeaf1] px-5 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-[#f5f3f7] transition-colors active:scale-[0.98]">确认选择</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 压力分布与平衡 -->
+    <div class="px-4 mb-8 space-y-4">
+        
+        <!-- 压力分布可视化 -->
+        <div class="bg-card p-4">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 bg-[#4e2f95] rounded-xl flex items-center justify-center text-white shadow-[0px_4px_12px_rgba(78,47,149,0.2)]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                    <div class="font-bold text-[15px] text-[#1b1b1e]">压力分布可视化</div>
+                    <div class="text-[10px] text-[#484554]">基于试躺体验测试压力分布对比分析</div>
+                </div>
+            </div>
+
+            <!-- 热力图图片 - 垂直排布 -->
+            <div class="flex flex-col gap-3">
+                <!-- 仰睡 -->
+                <div class="flex flex-col items-center bg-[#f5f3f7] rounded-xl border border-[#edeaf1] p-2 pb-2.5">
+                    <div class="w-full rounded-lg overflow-hidden flex justify-center relative pt-[45%]">
+                        <img src="pressure_supine.png" class="absolute top-0 left-0 w-full h-[125%] object-cover object-top" alt="仰睡压力分布" />
+                    </div>
+                    <div class="text-[12px] font-bold text-[#1b1b1e] mt-2 tracking-widest">仰睡</div>
+                </div>
+                <!-- 左侧睡 -->
+                <div class="flex flex-col items-center bg-[#f5f3f7] rounded-xl border border-[#edeaf1] p-2 pb-2.5">
+                    <div class="w-full rounded-lg overflow-hidden flex justify-center relative pt-[45%]">
+                        <img src="pressure_left.png" class="absolute top-0 left-0 w-full h-[125%] object-cover object-top" alt="左侧睡压力分布" />
+                    </div>
+                    <div class="text-[12px] font-bold text-[#1b1b1e] mt-2 tracking-widest">左侧睡</div>
+                </div>
+                <!-- 右侧睡 -->
+                <div class="flex flex-col items-center bg-[#f5f3f7] rounded-xl border border-[#edeaf1] p-2 pb-2.5">
+                    <div class="w-full rounded-lg overflow-hidden flex justify-center relative pt-[45%]">
+                        <img src="pressure_right.png" class="absolute top-0 left-0 w-full h-[125%] object-cover object-top" alt="右侧睡压力分布" />
+                    </div>
+                    <div class="text-[12px] font-bold text-[#1b1b1e] mt-2 tracking-widest">右侧睡</div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- 最佳压力平衡比 -->
+        <div class="bg-card p-4">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 bg-[#4e2f95] rounded-xl flex items-center justify-center text-white shadow-[0px_4px_12px_rgba(78,47,149,0.2)]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div>
+                    <div class="font-bold text-[15px] text-[#1b1b1e]">最佳压力平衡比</div>
+                    <div class="text-[10px] text-[#484554]">人体八分区压力分布优化分析</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <div class="rounded-xl overflow-hidden bg-white flex justify-center border border-[#edeaf1] shadow-[0px_4px_12px_rgba(78,47,149,0.04)]">
+                    <img src="pressure_balance_supine.png" class="w-full h-auto mix-blend-multiply" alt="正躺最佳压力平衡比" />
+                </div>
+                <div class="rounded-xl overflow-hidden bg-white flex justify-center border border-[#edeaf1] shadow-[0px_4px_12px_rgba(78,47,149,0.04)]">
+                    <img src="pressure_balance_side.png" class="w-full h-auto mix-blend-multiply" alt="侧躺最佳压力平衡比" />
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
